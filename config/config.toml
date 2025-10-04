@@ -1,0 +1,17 @@
+[server]
+http_port = ":8080"
+https_port = ":8443"
+
+redirect_to_https = true
+
+# Read, Write and Idle timeouts are in seconds 
+read_timeout = 10
+write_timeout = 15
+idle_timeout = 60
+
+log_endpoint_enabled = true
+
+[security]
+cert_file = "config/localhost+2.pem"
+key_file = "config/localhost+2-key.pem"
+prefer_server_cipher_suites = true
