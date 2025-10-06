@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"Momentum/internal/config"
+	"Momentum/internal/database"
 	"Momentum/internal/web"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,8 @@ import (
 func main() {
 	c := config.Config{}
 	c.LoadConfig()
+	conn := database.ConnectDB()
+	defer conn.Close()
 
 	gin.DisableConsoleColor()
 	f, _ := os.OpenFile("var/log/gin.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
