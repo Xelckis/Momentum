@@ -7,8 +7,11 @@ import (
 	"os"
 )
 
+var conn *pgxpool.Pool
+
 func ConnectDB() *pgxpool.Pool {
-	conn, err := pgxpool.New(context.Background(), os.Getenv("MOMENTUMDB"))
+	var err error
+	conn, err = pgxpool.New(context.Background(), os.Getenv("MOMENTUMDB"))
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}

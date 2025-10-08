@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"log"
+	"net/http"
 	"os"
 
 	"Momentum/internal/config"
@@ -23,11 +24,16 @@ func main() {
 	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
 
 	ginRouter := gin.New()
+	ginRouter.LoadHTMLGlob("templates/*")
 	serverHTTPS := config.LoadServerHTTPSConfig(c, ginRouter)
 
 	ginRouter.GET("/hello", web.Hello)
+	ginRouter.GET("/login", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", nil)
+	})
+	ginRouter.POST("/api/login", database.Login)
 	if c.Server.LogEndpoint {
-		ginRouter.GET("/log", web.Log)
+		ginRouter.GET("/log", web.AuthenticateMiddleware, web.Log)
 		ginRouter.GET("/ws/log", web.WsLog)
 	}
 
