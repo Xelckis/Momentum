@@ -1,12 +1,14 @@
 package web
 
 import (
-	"github.com/gin-gonic/gin"
+	"Momentum/internal/jwt"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func WsLog(c *gin.Context) {
@@ -61,4 +63,26 @@ func RedirectToHTTPS(httpsPort string) func(http.ResponseWriter, *http.Request) 
 
 		http.Redirect(w, r, target, http.StatusPermanentRedirect)
 	}
+}
+
+func AuthenticateMiddleware(c *gin.Context) {
+	tokenString, err := c.Cookie("token")
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		c.Abort()
+		return
+	}
+
+	claims, err := jwt.VerifyToken(tokenString)
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		c.Abort()
+		return
+	}
+
+	c.Set("username", claims["sub"])
+	c.Set("role", claims["aud"])
+
+	c.Next()
+
 }
