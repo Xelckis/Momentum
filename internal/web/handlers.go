@@ -48,6 +48,7 @@ func Log(c *gin.Context) {
 }
 
 func Hello(c *gin.Context) {
+
 	c.String(200, "Hello, World!")
 }
 
