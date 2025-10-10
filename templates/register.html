@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Registration Form</title>
+
+	<style>
+		body {
+			font-family: sans-serif;
+			max-width: 600px;
+			margin: 2em auto;
+		}
+
+		form div {
+			margin-bottom: 1em;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 0.25em;
+		}
+
+		input,
+		select {
+			width: 100%;
+			padding: 0.5em;
+			box-sizing: border-box;
+		}
+
+		button {
+			padding: 0.75em 1.5em;
+			cursor: pointer;
+		}
+
+		.error {
+			color: red;
+		}
+
+		.success {
+			color: green;
+		}
+
+		.htmx-indicator {
+			opacity: 0;
+			transition: opacity 200ms ease-in;
+		}
+
+		.htmx-request .htmx-indicator {
+			opacity: 1;
+		}
+
+		.htmx-request.htmx-indicator {
+			opacity: 1;
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>Register New User</h1>
+
+	<form hx-post="/api/admin/register" hx-target="#form-feedback" hx-swap="outerHTML"
+		hx-indicator="#loading-spinner">
+
+		<div id="form-feedback"></div>
+
+		<div>
+			<label for="username">Username:</label>
+			<input type="text" id="username" name="username" required>
+		</div>
+
+		<div>
+			<label for="password">Password:</label>
+			<input type="password" id="password" name="password" required maxlength="65">
+		</div>
+
+		<div>
+			<label for="role">Role:</label>
+			<select id="role" name="role" required>
+				<option value="user" selected>User</option>
+				<option value="admin">Admin</option>
+			</select>
+		</div>
+
+		<hr>
+		<p><em>Additional Information (GECOS Fields)</em></p>
+
+		<div>
+			<label for="full_name">Full Name:</label>
+			<input type="text" id="full_name" name="full_name" required>
+		</div>
+
+		<div>
+			<label for="location_contact">Location/Contact:</label>
+			<input type="text" id="location_contact" name="location_contact" required>
+		</div>
+
+		<div>
+			<label for="work_phone">Work Phone:</label>
+			<input type="tel" id="work_phone" name="work_phone" required>
+		</div>
+
+		<div>
+			<label for="home_phone">Home Phone:</label>
+			<input type="tel" id="home_phone" name="home_phone" required>
+		</div>
+
+		<button type="submit">
+			Register
+			<span id="loading-spinner" class="htmx-indicator">🔄</span>
+		</button>
+
+	</form>
+
+	<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</body>
+
+</html>

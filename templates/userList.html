@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>User Dashboard</title>
+
+	<style>
+		body {
+			font-family: sans-serif;
+			max-width: 800px;
+			margin: 2em auto;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 1em;
+		}
+
+		th,
+		td {
+			border: 1px solid #ddd;
+			padding: 8px;
+			text-align: left;
+		}
+
+		thead {
+			background-color: #f2f2f2;
+		}
+
+		.actions {
+			display: flex;
+			gap: 10px;
+		}
+
+		.modal-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, .5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1000
+		}
+
+		.modal-content {
+			background: white;
+			padding: 2em;
+			border-radius: 8px;
+			min-width: 400px;
+			max-width: 90%
+		}
+
+		.htmx-indicator {
+			opacity: 0;
+			transition: opacity 200ms ease-in
+		}
+
+		.htmx-request .htmx-indicator {
+			opacity: 1
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>User Management</h1>
+
+	<div style="margin-bottom: 1em;">
+		<input class="form-control" type="search" name="q" placeholder="Search by username or full name..."
+			hx-get="/users" hx-trigger="keyup changed delay:500ms, search" hx-target="#user-list-body"
+			hx-swap="innerHTML" hx-indicator="#search-indicator">
+		<span id="search-indicator" class="htmx-indicator"> 🔄</span>
+	</div>
+
+	<table>
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Username</th>
+				<th>Full Name</th>
+				<th>Role</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody id="user-list-body" hx-get="/api/admin/userslist" hx-trigger="load" hx-swap="innerHTML">
+			<tr>
+				<td colspan="5" style="text-align: center;">Loading...</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div id="modal-placeholder"></div>
+
+	<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</body>
+
+</html>

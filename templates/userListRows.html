@@ -1,0 +1,31 @@
+{{range .Users}}
+<tr id="user-row-{{.ID}}">
+	<td>{{.ID}}</td>
+	<td>{{.Username}}</td>
+	<td>{{.FullName}}</td>
+	<td>{{.Role}}</td>
+	<td class="actions">
+		<button hx-get="/users/edit/{{.ID}}" hx-target="#modal-placeholder" hx-swap="innerHTML"
+			class="btn btn-sm btn-primary">
+			Edit
+		</button>
+
+		<button hx-delete="/api/admin/users/{{.ID}}" hx-target="closest tr" hx-swap="outerHTML"
+			hx-confirm="Are you sure you want to delete the user {{.Username}}?"
+			class="btn btn-sm btn-danger">
+			Delete
+		</button>
+	</td>
+</tr>
+{{end}}
+
+{{if .NextCursor}}
+<tr id="load-more-trigger">
+	<td colspan="5" style="text-align: center;">
+		<span hx-get="/api/admin/userslist?q={{.SearchQuery}}&limit=20&after={{.NextCursor}}"
+			hx-trigger="intersect once" hx-swap="outerHTML" hx-target="#load-more-trigger">
+			Load More...
+		</span>
+	</td>
+</tr>
+{{end}}

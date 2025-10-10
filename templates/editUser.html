@@ -1,0 +1,33 @@
+<div class="modal-overlay">
+	<div class="modal-content">
+		<h3>Editing User: {{.User.Username}}</h3>
+
+		<form hx-put="/api/users/{{.User.ID}}" hx-target="#user-row-{{.User.ID}}" hx-swap="outerHTML">
+
+			<div style="margin-bottom: 1em;">
+				<label>Full Name:</label>
+				<input type="text" name="full_name" value="{{.User.FullName}}" class="form-control">
+			</div>
+
+			<div style="margin-bottom: 1em;">
+				<label>Permission:</label>
+				<select name="role" class="form-control">
+					<option value="user" {{if eq .User.Role "user" }}selected{{end}}>User
+					</option>
+					<option value="admin" {{if eq .User.Role "admin" }}selected{{end}}>Administrator
+					</option>
+				</select>
+			</div>
+
+			<hr style="margin-top: 2em; margin-bottom: 1em;">
+
+			<button type="submit" class="btn btn-success">Save Changes</button>
+
+			<button type="button" onclick="document.getElementById('modal-placeholder').innerHTML = ''"
+				class="btn btn-secondary">
+				Cancel
+			</button>
+
+		</form>
+	</div>
+</div>
