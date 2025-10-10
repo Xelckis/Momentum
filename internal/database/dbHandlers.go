@@ -3,10 +3,16 @@ package database
 import (
 	"Momentum/internal/jwt"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
+	"strconv"
+
+	//"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -120,15 +126,92 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	tokenString, err := jwt.CreateToken(username, user.Role)
+	tokenString, err := jwt.CreateToken(username, user.Role, user.ID)
 	if err != nil {
-		c.String(http.StatusBadRequest, "<div class='error'>Internal server error</div>")
+		c.String(http.StatusBadRequest, "<div class='error'>Internal server error (JWT)</div>")
 		return
 	}
-
-	c.String(http.StatusOK, "<div class='success'>Logged in</div>")
 
 	c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 	c.Redirect(http.StatusSeeOther, "/")
 
+}
+
+func Register(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+	role := c.PostForm("role")
+	fullName := c.PostForm("full_name")
+	locationContact := c.PostForm("location_contact")
+	workPhone := c.PostForm("work_phone")
+	homePhone := c.PostForm("home_phone")
+
+	if role != "admin" && role != "user" {
+		c.Data(http.StatusUnprocessableEntity, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro: Invalid role.</div>`))
+		return
+	}
+
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro: Internal server error</div>`))
+		return
+	}
+
+	queryCreateUser := `INSERT INTO users (username, password_hash, role, full_name, location_contact, work_phone, home_phone) VALUES (@username, @passwordHash, @role, @fullName, @locationContact, @workPhone, @homePhone) RETURNING id`
+	args := pgx.NamedArgs{
+		"username":        username,
+		"passwordHash":    hashPassword,
+		"role":            role,
+		"fullName":        fullName,
+		"locationContact": locationContact,
+		"workPhone":       workPhone,
+		"homePhone":       homePhone,
+	}
+
+	var newID int
+	err = conn.QueryRow(c.Request.Context(), queryCreateUser, args).Scan(&newID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "2350G" {
+			c.Data(http.StatusConflict, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro: Nome de usuário já está em uso.</div>`))
+			return
+		}
+
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro interno do servidor ao criar usuário.</div>`))
+		return
+	}
+
+	successHTML := `<div id="form-feedback" class="success">New user registered! ID: ` + fmt.Sprintf("%d", newID) + `</div>`
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(successHTML))
+}
+
+func DeleteUser(c *gin.Context) {
+	idStr := c.Param("id")
+
+	loggedInUserIDAny, _ := c.Get("userID")
+	loggedInUserID, _ := loggedInUserIDAny.(string)
+	if idStr == loggedInUserID {
+		c.String(http.StatusForbidden, "Você não pode excluir sua própria conta.")
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.String(http.StatusBadRequest, "Inavalid User ID.")
+		return
+	}
+
+	query := "DELETE FROM users WHERE id = $1"
+	cmdTag, err := conn.Exec(c.Request.Context(), query, id)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		c.String(http.StatusNotFound, "User not found.")
+		return
+	}
+
+	c.Status(http.StatusOK)
 }
