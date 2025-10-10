@@ -27,13 +27,37 @@ func main() {
 	ginRouter.LoadHTMLGlob("templates/*")
 	serverHTTPS := config.LoadServerHTTPSConfig(c, ginRouter)
 
-	ginRouter.GET("/hello", web.Hello)
 	ginRouter.GET("/login", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login.html", nil)
 	})
+
+	adminRoutes := ginRouter.Group("/admin")
+	adminRoutes.Use(web.AuthenticateMiddleware, web.IsAdmin)
+	{
+		adminRoutes.GET("/register", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "register.html", nil)
+		})
+
+		adminRoutes.GET("/users", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "userList.html", nil)
+		})
+	}
+
+	ginRouter.GET("/logout", func(c *gin.Context) {
+		c.SetCookie("token", "", -1, "/", "localhost", false, true)
+		c.Redirect(http.StatusSeeOther, "/")
+	})
+
+	apiAdminRoutes := ginRouter.Group("/api/admin")
+	apiAdminRoutes.Use(web.AuthenticateMiddleware, web.IsAdmin)
+	{
+		apiAdminRoutes.GET("/userslist", database.UserList)
+		apiAdminRoutes.POST("/register", database.Register)
+		apiAdminRoutes.DELETE("/users/:id", database.DeleteUser)
+	}
 	ginRouter.POST("/api/login", database.Login)
 	if c.Server.LogEndpoint {
-		ginRouter.GET("/log", web.AuthenticateMiddleware, web.Log)
+		ginRouter.GET("/log", web.AuthenticateMiddleware, web.IsAdmin, web.Log)
 		ginRouter.GET("/ws/log", web.WsLog)
 	}
 
