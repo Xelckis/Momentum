@@ -82,6 +82,19 @@ func AuthenticateMiddleware(c *gin.Context) {
 
 	c.Set("username", claims["sub"])
 	c.Set("role", claims["aud"])
+	c.Set("userID", claims["id"])
+
+	c.Next()
+
+}
+
+func IsAdmin(c *gin.Context) {
+	role, ok := c.Get("role")
+	if role != "admin" && !ok {
+		c.Redirect(http.StatusForbidden, "/")
+		c.Abort()
+		return
+	}
 
 	c.Next()
 
