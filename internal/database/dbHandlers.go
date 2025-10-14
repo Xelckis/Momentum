@@ -44,6 +44,20 @@ type Users struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+func UserProfile(c *gin.Context) {
+	id, _ := c.Get("userID")
+	var user Users
+	err := user.findUserByID(c, id.(string))
+	if err != nil {
+		c.String(http.StatusNotFound, "User not found")
+		return
+	}
+
+	c.HTML(http.StatusOK, "editProfile.html", gin.H{
+		"User": user,
+	})
+
 }
 
 func UserList(c *gin.Context) {

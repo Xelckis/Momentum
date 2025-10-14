@@ -31,6 +31,8 @@ func main() {
 		c.HTML(http.StatusOK, "login.html", nil)
 	})
 
+	ginRouter.GET("/profile/edit", web.AuthenticateMiddleware, database.UserProfile)
+
 	adminRoutes := ginRouter.Group("/admin")
 	adminRoutes.Use(web.AuthenticateMiddleware, web.IsAdmin)
 	{
