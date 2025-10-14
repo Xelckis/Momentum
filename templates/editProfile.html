@@ -102,23 +102,23 @@
 
 		<div>
 			<label for="full_name">Full Name:</label>
-			<input type="text" id="full_name" name="full_name" value="{{.User.FullName}}">
+			<input type="text" id="full_name" name="full_name" value="{{.User.FullName}}" required>
 		</div>
 
 		<div>
 			<label for="location_contact">Location/Contact:</label>
 			<input type="text" id="location_contact" name="location_contact"
-				value="{{.User.LocationContact}}">
+				value="{{.User.LocationContact}}" required>
 		</div>
 
 		<div>
 			<label for="work_phone">Work Phone:</label>
-			<input type="tel" id="work_phone" name="work_phone" value="{{.User.WorkPhone}}">
+			<input type="tel" id="work_phone" name="work_phone" value="{{.User.WorkPhone}}" required>
 		</div>
 
 		<div>
 			<label for="home_phone">Home Phone:</label>
-			<input type="tel" id="home_phone" name="home_phone" value="{{.User.HomePhone}}">
+			<input type="tel" id="home_phone" name="home_phone" value="{{.User.HomePhone}}" required>
 		</div>
 
 		<button type="submit">
@@ -127,6 +127,19 @@
 		</button>
 
 	</form>
+
+	<hr style="margin-top: 2em; margin-bottom: 2em;">
+
+	<div>
+		<h3>Security</h3>
+		<p>Change your password by clicking the button below.</p>
+
+		<button hx-get="/profile/edit/password" hx-target="#modal-placeholder" hx-swap="innerHTML">
+			Change Password
+		</button>
+	</div>
+
+	<div id="modal-placeholder"></div>
 
 	<script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </body>

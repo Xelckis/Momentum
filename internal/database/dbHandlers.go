@@ -203,14 +203,27 @@ func EditUserDB(c *gin.Context) {
 
 	cmdTag, err := conn.Exec(c.Request.Context(), query, fullName, role, locationContact, workPhone, homePhone, id)
 	if err != nil {
-		log.Printf("Error editing user\n")
+		c.String(http.StatusInternalServerError, "Error saving changes.")
 		return
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		log.Println("User not found.")
+		c.String(http.StatusNotFound, "Error user not found")
 		return
 	}
+
+	var updatedUser Users
+	err = updatedUser.findUserByID(c, id)
+	if err != nil {
+		c.String(http.StatusNotFound, "User not found after changes.")
+		return
+	}
+
+	c.Header("HX-Trigger", "closeModalEvent")
+
+	c.HTML(http.StatusOK, "userListRows.html", gin.H{
+		"Users": []Users{updatedUser},
+	})
 
 }
 
@@ -231,11 +244,11 @@ func EditUserPage(c *gin.Context) {
 
 func (u *Users) findUserByID(c *gin.Context, id string) error {
 	query := `
-        SELECT id, username, role, full_name, location_contact, work_phone, home_phone 
+        SELECT id, username, role, full_name, location_contact, work_phone, home_phone, created_at, updated_at 
         FROM users 
         WHERE id = $1`
 
-	err := conn.QueryRow(c.Request.Context(), query, id).Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.LocationContact, &u.WorkPhone, &u.HomePhone)
+	err := conn.QueryRow(c.Request.Context(), query, id).Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.LocationContact, &u.WorkPhone, &u.HomePhone, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}

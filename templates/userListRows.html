@@ -35,3 +35,13 @@
 	</td>
 </tr>
 {{end}}
+
+<script>
+	document.body.addEventListener('closeModalEvent', function (evt) {
+		var modal = document.getElementById('modal-placeholder');
+		if (modal) {
+			modal.innerHTML = '';
+			console.log('Evento "closeModalEvent" recebido, modal fechado.');
+		}
+	});
+</script>

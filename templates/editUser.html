@@ -6,28 +6,31 @@
 
 			<div style="margin-bottom: 1em;">
 				<label>Full Name:</label>
-				<input type="text" name="full_name" value="{{.User.FullName}}" class="form-control">
+				<input type="text" name="full_name" value="{{.User.FullName}}" class="form-control"
+					required>
 			</div>
 
 			<div style="margin-bottom: 1em;">
 				<label>Location/Contact:</label>
 				<input type="text" name="location_contact" value="{{.User.LocationContact}}"
-					class="form-control">
+					class="form-control" required>
 			</div>
 
 			<div style="margin-bottom: 1em;">
 				<label>Work Phone:</label>
-				<input type="tel" name="work_phone" value="{{.User.WorkPhone}}" class="form-control">
+				<input type="tel" name="work_phone" value="{{.User.WorkPhone}}" class="form-control"
+					required>
 			</div>
 
 			<div style="margin-bottom: 1em;">
 				<label>Home Phone:</label>
-				<input type="tel" name="home_phone" value="{{.User.HomePhone}}" class="form-control">
+				<input type="tel" name="home_phone" value="{{.User.HomePhone}}" class="form-control"
+					required>
 			</div>
 
 			<div style="margin-bottom: 1em;">
 				<label>Permission:</label>
-				<select name="role" class="form-control">
+				<select name="role" class="form-control" required>
 					<option value="user" {{if eq .User.Role "user" }}selected{{end}}>User
 					</option>
 					<option value="admin" {{if eq .User.Role "admin" }}selected{{end}}>Administrator
