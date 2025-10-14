@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -58,6 +57,84 @@ func UserProfile(c *gin.Context) {
 		"User": user,
 	})
 
+}
+
+func EditPassword(c *gin.Context) {
+	id, ok := c.Get("userID")
+	if !ok {
+		c.HTML(http.StatusOK, "changePasswordModal.html", gin.H{
+			"Error": "An internal error occurred. Please try again.",
+		})
+		return
+	}
+
+	currentPassword := c.PostForm("current_password")
+	newPassword := c.PostForm("new_password")
+	confirmPassword := c.PostForm("confirm_password")
+
+	if newPassword != confirmPassword {
+		c.HTML(http.StatusOK, "changePasswordModal.html", gin.H{
+			"Error": "The new passwords do not match.",
+		})
+		return
+	}
+
+	query := `SELECT password_hash FROM users WHERE id = $1`
+	var passwordHash string
+	err := conn.QueryRow(c.Request.Context(), query, id).Scan(&passwordHash)
+	if err != nil {
+		c.HTML(http.StatusOK, "changePasswordModal.html", gin.H{
+			"Error": "An internal error occurred. Please try again.",
+		})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(currentPassword)); err != nil {
+		c.HTML(http.StatusOK, "changePasswordModal.html", gin.H{
+			"Error": "The current password do not match.",
+		})
+		return
+	}
+
+	newPasswordHash, err := createPasswordHash(newPassword)
+	if err != nil {
+		c.HTML(http.StatusOK, "changePasswordModal.html", gin.H{
+			"Error": "An internal error occurred. Please try again.",
+		})
+		return
+	}
+
+	query = `UPDATE users SET password_hash = $1 WHERE id = $2;`
+	cmdTag, err := conn.Exec(c.Request.Context(), query, newPasswordHash, id)
+	if err != nil {
+		c.HTML(http.StatusOK, "changePasswordModal.html", gin.H{
+			"Error": "Error saving changes.",
+		})
+		return
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		c.HTML(http.StatusOK, "changePasswordModal.html", gin.H{
+			"Error": "User not found",
+		})
+		return
+	}
+
+	successFragment := `<div id="form-feedback" hx-swap-oob="true" class="success">Password updated successfully!</div>`
+
+	closeModalFragment := `<div id="modal-placeholder" hx-swap-oob="true"></div>`
+
+	finalHTML := successFragment + closeModalFragment
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(finalHTML))
+
+}
+
+func createPasswordHash(password string) ([]byte, error) {
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		return []byte{}, fmt.Errorf("Internal server error")
+	}
+	return hashPassword, nil
 }
 
 func UserList(c *gin.Context) {
@@ -217,7 +294,7 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	hashPassword, err := createPasswordHash(password)
 	if err != nil {
 		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro: Internal server error</div>`))
 		return

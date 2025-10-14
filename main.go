@@ -32,6 +32,10 @@ func main() {
 	})
 
 	ginRouter.GET("/profile/edit", web.AuthenticateMiddleware, database.UserProfile)
+	ginRouter.GET("/profile/edit/password", web.AuthenticateMiddleware, func(c *gin.Context) {
+		c.HTML(http.StatusOK, "changePasswordModal.html", nil)
+	})
+	ginRouter.POST("/profile/edit/password", web.AuthenticateMiddleware, database.EditPassword)
 
 	adminRoutes := ginRouter.Group("/admin")
 	adminRoutes.Use(web.AuthenticateMiddleware, web.IsAdmin)
