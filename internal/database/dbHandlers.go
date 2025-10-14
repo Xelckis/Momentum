@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	//"time"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -34,7 +34,7 @@ type Users struct {
 	FullName string
 	Role     string
 
-	/*LocationContact string
+	LocationContact string
 	WorkPhone       string
 	HomePhone       string
 	OtherInfo       string
@@ -42,7 +42,8 @@ type Users struct {
 	CustomFields map[string]any
 
 	CreatedAt time.Time
-	UpdatedAt time.Time*/
+	UpdatedAt time.Time
+}
 }
 
 func UserList(c *gin.Context) {
@@ -51,18 +52,16 @@ func UserList(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	//query := "SELECT id, username, role, full_name, location_contact, work_phone, home_phone, other_info, custom_fields, created_at, updated_at FROM users WHERE id > $1 ORDER BY id ASC LIMIT $2;"
 
 	searchQuery := c.Query("q")
 
 	query := `
-        SELECT id, username, role, full_name 
+        SELECT id, username, role, full_name, location_contact, work_phone, home_phone, created_at, updated_at 
         FROM users 
         WHERE id > $1 AND (username ILIKE '%' || $3 || '%' OR full_name ILIKE '%' || $3 || '%')
         ORDER BY id ASC 
         LIMIT $2;`
 
-	//rows, err := conn.Query(c.Request.Context(), query, pagination.After, pagination.Limit)
 	rows, err := conn.Query(c.Request.Context(), query, pagination.After, pagination.Limit, searchQuery)
 	if err != nil {
 		log.Printf("failed to query items: %v", err)
@@ -73,8 +72,7 @@ func UserList(c *gin.Context) {
 	var users []Users
 	for rows.Next() {
 		var user Users
-		//if err := rows.Scan(&user.ID, &user.Username, &user.Role, &user.FullName, &user.LocationContact, &user.WorkPhone, &user.HomePhone, &user.OtherInfo, &user.CustomFields, &user.CreatedAt, &user.UpdatedAt); err != nil {
-		if err := rows.Scan(&user.ID, &user.Username, &user.Role, &user.FullName); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.Role, &user.FullName, &user.LocationContact, &user.WorkPhone, &user.HomePhone, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			log.Printf("failed to scan row: %v", err)
 			return
 		}
@@ -98,6 +96,60 @@ func UserList(c *gin.Context) {
 		"SearchQuery": searchQuery,
 	})
 
+}
+
+func EditUserDB(c *gin.Context) {
+	id := c.Param("id")
+	fullName := c.PostForm("full_name")
+	role := c.PostForm("role")
+	locationContact := c.PostForm("location_contact")
+	workPhone := c.PostForm("work_phone")
+	homePhone := c.PostForm("home_phone")
+
+	query := `
+		UPDATE users SET full_name = $1, role = $2, location_contact = $3, work_phone = $4, home_phone = $5  WHERE id = $6;
+	`
+
+	cmdTag, err := conn.Exec(c.Request.Context(), query, fullName, role, locationContact, workPhone, homePhone, id)
+	if err != nil {
+		log.Printf("Error editing user\n")
+		return
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		log.Println("User not found.")
+		return
+	}
+
+}
+
+func EditUserPage(c *gin.Context) {
+	id := c.Param("id")
+
+	var user Users
+	err := user.findUserByID(c, id)
+	if err != nil {
+		c.String(http.StatusNotFound, "User not found")
+		return
+	}
+
+	c.HTML(http.StatusOK, "editUser.html", gin.H{
+		"User": user,
+	})
+}
+
+func (u *Users) findUserByID(c *gin.Context, id string) error {
+	query := `
+        SELECT id, username, role, full_name, location_contact, work_phone, home_phone 
+        FROM users 
+        WHERE id = $1`
+
+	err := conn.QueryRow(c.Request.Context(), query, id).Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.LocationContact, &u.WorkPhone, &u.HomePhone)
+	if err != nil {
+		return fmt.Errorf("%v", err)
+	}
+
+	return nil
 }
 
 func Login(c *gin.Context) {

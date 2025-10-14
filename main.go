@@ -41,6 +41,8 @@ func main() {
 		adminRoutes.GET("/users", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "userList.html", nil)
 		})
+
+		adminRoutes.GET("/users/edit/:id", database.EditUserPage)
 	}
 
 	ginRouter.GET("/logout", func(c *gin.Context) {
@@ -54,6 +56,7 @@ func main() {
 		apiAdminRoutes.GET("/userslist", database.UserList)
 		apiAdminRoutes.POST("/register", database.Register)
 		apiAdminRoutes.DELETE("/users/:id", database.DeleteUser)
+		apiAdminRoutes.PUT("users/:id", database.EditUserDB)
 	}
 	ginRouter.POST("/api/login", database.Login)
 	if c.Server.LogEndpoint {

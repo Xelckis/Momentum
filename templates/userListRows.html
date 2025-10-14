@@ -4,8 +4,14 @@
 	<td>{{.Username}}</td>
 	<td>{{.FullName}}</td>
 	<td>{{.Role}}</td>
+
+	<td>{{.LocationContact}}</td>
+	<td>{{.WorkPhone}}</td>
+	<td>{{.HomePhone}}</td>
+	<td>{{.CreatedAt.Format "02 Jan 2006 15:04"}}</td>
+	<td>{{.UpdatedAt.Format "02 Jan 2006 15:04"}}</td>
 	<td class="actions">
-		<button hx-get="/users/edit/{{.ID}}" hx-target="#modal-placeholder" hx-swap="innerHTML"
+		<button hx-get="/admin/users/edit/{{.ID}}" hx-target="#modal-placeholder" hx-swap="innerHTML"
 			class="btn btn-sm btn-primary">
 			Edit
 		</button>
