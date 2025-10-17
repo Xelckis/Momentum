@@ -1,0 +1,2 @@
+DROP TRIGGER IF EXISTS set_timestamp ON jobs;
+DROP TABLE IF EXISTS jobs;
