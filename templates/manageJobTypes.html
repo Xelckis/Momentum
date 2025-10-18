@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Manage Job Types</title>
+	<style>
+		body {
+			font-family: system-ui, sans-serif;
+			max-width: 700px;
+			margin: 2em auto;
+		}
+
+		.job-types-list {
+			list-style: none;
+			padding: 0;
+		}
+
+		.job-type-item {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 1em;
+			border: 1px solid #ddd;
+			margin-bottom: -1px;
+		}
+
+		.job-type-item:first-child {
+			border-top-left-radius: 8px;
+			border-top-right-radius: 8px;
+		}
+
+		.job-type-item:last-child {
+			border-bottom-left-radius: 8px;
+			border-bottom-right-radius: 8px;
+			margin-bottom: 0;
+		}
+
+		.job-type-item form {
+			width: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1em;
+		}
+
+		input[type="text"] {
+			flex-grow: 1;
+			padding: 0.5em;
+		}
+
+		.actions button {
+			margin-left: 0.5em;
+		}
+
+		.add-form {
+			padding: 1.5em;
+			border: 1px solid #ccc;
+			border-radius: 8px;
+			margin-bottom: 2em;
+			background-color: #f9f9f9;
+		}
+
+		.htmx-indicator {
+			opacity: 0;
+			transition: opacity 200ms ease-in;
+		}
+
+		.htmx-request .htmx-indicator {
+			opacity: 1;
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>Manage Job Types</h1>
+
+	<div class="add-form">
+		<h3>Add New Job Type</h3>
+
+		<div id="add-form-feedback"></div>
+
+		<form hx-post="/admin/job-types" hx-target="#job-types-list" hx-swap="beforeend"
+			hx-on::after-request="this.reset()">
+			<input type="text" name="name" placeholder="Job Type Name (e.g., Repair, Project)" required>
+			<input type="text" name="description" placeholder="Description" required>
+			<button type="submit">Add <span class="htmx-indicator">🔄</span></button>
+		</form>
+	</div>
+
+	<h2>Existing Job Types</h2>
+	<ul id="job-types-list">
+		{{range .JobTypes}}
+		{{template "jobTypeItem.html" .}}
+		{{end}}
+	</ul>
+
+	<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</body>
+
+</html>

@@ -1,0 +1,27 @@
+<li id="job-type-{{.ID}}" class="job-type-item">
+	<form hx-put="/admin/job-types/{{.ID}}" hx-target="closest li" hx-swap="outerHTML" style="width: 100%;">
+
+		<div style="flex-grow: 1;">
+
+			<div style="margin-bottom: 0.5em;">
+				<label for="name-{{.ID}}">Name:</label>
+				<input id="name-{{.ID}}" type="text" name="name" value="{{.Name}}" required>
+			</div>
+
+			<div>
+				<label for="description-{{.ID}}">Description:</label>
+				<textarea id="description-{{.ID}}" name="description" required rows="3"
+					style="width: 100%;">{{.Description}}</textarea>
+			</div>
+
+		</div>
+
+		<div class="actions">
+			<button type="submit" class="btn btn-success">Save</button>
+			<button hx-get="/admin/job-types/{{.ID}}" hx-target="closest li" hx-swap="outerHTML"
+				type="button" class="btn btn-light">
+				Cancel
+			</button>
+		</div>
+	</form>
+</li>

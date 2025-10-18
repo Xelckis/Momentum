@@ -49,6 +49,12 @@ func main() {
 		})
 
 		adminRoutes.GET("/users/edit/:id", database.EditUserPage)
+
+		adminRoutes.GET("/job-types/:id", database.GetJobTypeHandler)
+		adminRoutes.GET("/job-types", database.JobTypeList)
+		adminRoutes.POST("/job-types", database.CreateJobType)
+		adminRoutes.GET("/job-types/edit/:id", database.JobTypeEditForm)
+		adminRoutes.PUT("/job-types/:id", database.EditJobTypeDB)
 	}
 
 	ginRouter.GET("/logout", func(c *gin.Context) {

@@ -1,0 +1,16 @@
+<li id="job-type-{{.ID}}" class="job-type-item">
+	<div>
+		<strong>{{.Name}}</strong><br>
+		<small>{{.Description}}</small>
+	</div>
+	<div class="actions">
+		<button hx-get="/admin/job-types/edit/{{.ID}}" hx-target="closest li" hx-swap="outerHTML"
+			class="btn btn-secondary">
+			Edit
+		</button>
+		<button hx-delete="/admin/job-types/{{.ID}}" hx-target="closest li" hx-swap="outerHTML"
+			hx-confirm="Are you sure you want to delete '{{.Name}}'?" class="btn btn-danger">
+			Delete
+		</button>
+	</div>
+</li>
