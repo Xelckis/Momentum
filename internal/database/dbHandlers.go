@@ -176,9 +176,9 @@ func JobTypeEditForm(c *gin.Context) {
 }
 
 func (j *jobType) findJobTypeByID(c *gin.Context, id string) error {
-	query := `SELECT id, name, description FROM job_types WHERE id = $1`
+	query := `SELECT id, name, description, created_at FROM job_types WHERE id = $1`
 
-	err := conn.QueryRow(c.Request.Context(), query, id).Scan(&j.ID, &j.Name, &j.Description)
+	err := conn.QueryRow(c.Request.Context(), query, id).Scan(&j.ID, &j.Name, &j.Description, &j.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
@@ -355,7 +355,7 @@ func EditPassword(c *gin.Context) {
 }
 
 func createPasswordHash(password string) ([]byte, error) {
-	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		return []byte{}, fmt.Errorf("Internal server error")
 	}
