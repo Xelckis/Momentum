@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Financial Records</title>
+	<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+	<style>
+		body {
+			font-family: sans-serif;
+			background-color: #f4f4f4;
+			padding: 20px;
+		}
+
+		.container {
+			max-width: 900px;
+			margin: auto;
+			background: white;
+			padding: 30px;
+			border-radius: 8px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		}
+
+		.page-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			border-bottom: 1px solid #eee;
+			padding-bottom: 15px;
+			margin-bottom: 20px;
+		}
+
+		.page-header h2 {
+			margin: 0;
+		}
+
+		.button-add {
+			background-color: #28a745;
+			color: white;
+			padding: 10px 15px;
+			border-radius: 4px;
+			text-decoration: none;
+		}
+
+		.transaction-list {
+			margin-top: 20px;
+		}
+
+		.transaction-item {
+			border: 1px solid #eee;
+			border-radius: 5px;
+			padding: 15px;
+			margin-bottom: 10px;
+			display: grid;
+			grid-template-columns: 1fr auto auto;
+			gap: 10px 20px;
+			align-items: center;
+		}
+
+		.transaction-item.income {
+			border-left: 5px solid #28a745;
+		}
+
+		.transaction-item.expense {
+			border-left: 5px solid #dc3545;
+		}
+
+		.transaction-item .description {
+			font-weight: bold;
+		}
+
+		.transaction-item .date {
+			color: #555;
+			font-size: 0.9em;
+		}
+
+		.transaction-item .amount {
+			font-weight: bold;
+			text-align: right;
+		}
+
+		.transaction-item.income .amount {
+			color: #28a745;
+		}
+
+		.transaction-item.expense .amount {
+			color: #dc3545;
+		}
+
+		.related-job {
+			font-size: 0.8em;
+			color: #777;
+			grid-column: 1 / -1;
+			margin-top: 5px;
+		}
+
+		.load-more-container {
+			text-align: center;
+			padding: 20px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<div class="page-header">
+			<h2>Financial Records</h2>
+			<a href="/finance/new" class="button-add">+ New Record</a>
+		</div>
+
+		<div class="transaction-list" id="transaction-list">
+			<div id="load-transactions-trigger" class="load-more-container"
+				hx-get="/api/finance/transactions?limit=20&before=now" hx-trigger="load"
+				hx-swap="outerHTML">
+				Loading records... <span class="htmx-indicator">🔄</span>
+			</div>
+		</div>
+	</div>
+</body>
+
+</html>

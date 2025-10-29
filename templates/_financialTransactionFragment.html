@@ -1,0 +1,27 @@
+{{range .Transactions}}
+<div class="transaction-item {{.Type}}" id="transaction-{{.ID}}">
+	<div class="description">{{.Description}}</div>
+	<div class="date">{{.TransactionDate.Format "Jan 02, 2006"}}</div>
+	<div class="amount">
+		{{if eq .Type "income"}}+{{else}}-{{end}}
+		R$ {{printf "%s" .Amount.String}}
+	</div>
+	{{if .RelatedJobID.Valid}}
+	<div class="related-job">Related Job ID: {{.RelatedJobID.Int64}}</div>
+	{{end}}
+</div>
+{{end}}
+
+{{if .NextCursor}}
+<div id="load-transactions-trigger" class="load-more-container"
+	hx-get="/api/finance/transactions?limit=20&before={{.NextCursor}}" hx-trigger="intersect once"
+	hx-swap="outerHTML">
+	Load More Records... <span class="htmx-indicator">🔄</span>
+</div>
+{{end}}
+
+{{if not .NextCursor}}
+<div class="load-more-container">
+	<p>No more records.</p>
+</div>
+{{end}}

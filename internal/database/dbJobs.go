@@ -924,3 +924,51 @@ func JobUpdateHistory(c *gin.Context) {
 	})
 
 }
+
+func SearchJobFinances(c *gin.Context) {
+	jobQuery := c.Query("q_job")
+	if jobQuery == "" {
+		return
+	}
+
+	searchValue := "%" + jobQuery + "%"
+	query := `SELECT id, title, ticket_id FROM jobs WHERE title ILIKE $1 OR ticket_id ILIKE $1 ORDER BY title LIMIT 10;`
+
+	rows, err := conn.Query(c.Request.Context(), query, searchValue)
+	if err != nil {
+		c.HTML(http.StatusOK, "_jobSearchResultsFinances.html", gin.H{
+			"Error": "An internal error occurred while searching jobs. Please try again.",
+		})
+
+		log.Printf("Failed to fetch jobs: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	var jobs []Job
+	for rows.Next() {
+		var job Job
+		if err := rows.Scan(&job.ID, &job.Title, &job.Ticket); err != nil {
+			c.HTML(http.StatusOK, "_jobSearchResultsFinances.html", gin.H{
+				"Error": "An internal error occurred while searching jobs. Please try again.",
+			})
+
+			log.Printf("failed to scan row: %v", err)
+			return
+		}
+		jobs = append(jobs, job)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("error iterating rows: %v", err)
+		c.HTML(http.StatusOK, "_jobSearchResultsFinances.html", gin.H{
+			"Error": "An internal error occurred while searching jobs. Please try again.",
+		})
+		return
+	}
+
+	c.HTML(http.StatusOK, "_jobSearchResultsFinances.html", gin.H{
+		"Jobs": jobs,
+	})
+
+}

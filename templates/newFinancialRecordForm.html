@@ -1,0 +1,80 @@
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+<div id="finance-form-feedback">
+	{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+</div>
+
+<form hx-post="/api/finance/transactions" hx-target="#finance-form-feedback" hx-swap="innerHTML"
+	hx-on::after-request="if(event.detail.verb.toLowerCase() === 'post' && event.detail.successful) this.reset()">
+	<div style="margin-bottom: 1em;">
+		<label for="description">Description:</label>
+		<textarea id="description" name="description" rows="3" style="width: 100%;"
+			required>{{.FormData.description}}</textarea>
+	</div>
+
+	<div style="margin-bottom: 1em;">
+		<label for="amount">Amount (R$):</label>
+		<input type="number" id="amount" name="amount" step="0.01" min="0" style="width: 100%;"
+			value="{{.FormData.amount}}" required>
+		<small>Enter a positive value. The type below determines income/expense.</small>
+	</div>
+
+	<div style="margin-bottom: 1em;">
+		<label for="type">Type:</label>
+		<select id="type" name="type" style="width: 100%;" required>
+			<option value="" disabled {{if not .FormData.type}}selected{{end}}>-- Select Type --</option>
+			<option value="income" {{if eq .FormData.type "income" }}selected{{end}}>Income</option>
+			<option value="expense" {{if eq .FormData.type "expense" }}selected{{end}}>Expense</option>
+		</select>
+	</div>
+
+	<div style="margin-bottom: 1em;">
+		<label for="transaction_date">Transaction Date:</label>
+		<input type="date" id="transaction_date" name="transaction_date" style="width: 100%;"
+			value="{{.FormData.transaction_date}}">
+		<small>Leave blank to use today's date.</small>
+	</div>
+
+	<hr style="margin: 1.5em 0;">
+	<h4>Related Job (Optional)</h4>
+
+	<input type="hidden" id="selected_job_id" name="related_job_id" value="{{.FormData.related_job_id}}">
+
+	<div style="margin-bottom: 0.5em;">
+		<label for="job_search">Search Jobs (Title or Ticket ID):</label>
+		<input type="search" id="job_search" name="q_job" placeholder="Start typing..."
+			hx-get="/api/jobs/search" hx-trigger="keyup changed delay:300ms, search"
+			hx-target="#job-search-results" hx-swap="innerHTML" hx-indicator="#job-search-spinner"
+			autocomplete="off" style="width: 100%;">
+		<span id="job-search-spinner" class="htmx-indicator">🔄</span>
+	</div>
+
+	<div id="job-search-results"
+		style="max-height: 150px; overflow-y: auto; border: 1px solid #eee; margin-top: -1px; margin-bottom: 1em; background-color: white;">
+	</div>
+
+	<div style="margin-bottom: 1em;">
+		<strong>Selected Job:</strong>
+		<span id="selected-job-display">
+			{{if .SelectedJobDisplay}}{{.SelectedJobDisplay}}{{else}}None{{end}}
+		</span>
+		<button type="button" onclick="selectJob('', 'None')"
+			style="margin-left: 10px; font-size: 0.8em;">Clear</button>
+	</div>
+
+
+	<hr style="margin-top: 2em; margin-bottom: 1em;">
+
+	<button type="submit">Add Record</button>
+
+</form>
+
+<script>
+	function selectJob(id, display) {
+		document.getElementById('selected_job_id').value = id;
+		document.getElementById('selected-job-display').textContent = display;
+		document.getElementById('job_search').value = '';
+		document.getElementById('job-search-results').innerHTML = '';
+	}
+
+</script>

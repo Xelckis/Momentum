@@ -1,0 +1,18 @@
+{{if .Error}}
+<p style="padding: 8px; color: red; margin: 0;">{{.Error}}</p>
+
+{{else if .Jobs}}
+<ul style="list-style: none; padding: 0; margin: 0;">
+	    {{range .Jobs}}
+	    <li style="padding: 8px; border-bottom: 1px solid #f0f0f0; cursor: pointer;" title="Select Job ID {{.ID}}"  
+		      onclick="selectJob('{{.ID}}', '{{.Title | js}} ({{.Ticket | js}})')">
+
+		        <strong>{{.Title}}</strong>
+		        <br>
+		        <small style="color: #555;">Ticket: {{.Ticket}}</small>
+		    </li>
+	    {{end}}
+</ul>
+{{else}}
+<p style="padding: 8px; color: #777; margin: 0;">No jobs found matching your search.</p>
+{{end}}
