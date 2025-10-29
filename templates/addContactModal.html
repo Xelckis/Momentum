@@ -1,0 +1,33 @@
+<div class="modal-overlay">
+	<div class="modal-content">
+		<h3>Add New Contact</h3>
+
+		<form hx-post="/contacts" hx-target="this" hx-swap="outerHTML" id="add-contact-form">
+
+			<div id="add-contact-feedback">
+				{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+			</div>
+
+			<div style="margin-bottom: 1em;">
+				<label for="name">Name:</label>
+				<input type="text" id="name" name="name" value="{{.FormData.name}}" required>
+			</div>
+			<div style="margin-bottom: 1em;">
+				<label for="email">Email:</label>
+				<input type="email" id="email" name="email" value="{{.FormData.email}}">
+			</div>
+			<div style="margin-bottom: 1em;">
+				<label for="phone">Phone:</label>
+				<input type="text" id="phone" name="phone" value="{{.FormData.phone}}">
+			</div>
+
+			<hr style="margin-top: 2em; margin-bottom: 1em;">
+
+			<button type="submit">Create Contact</button>
+
+			<button type="button" onclick="document.getElementById('modal-placeholder').innerHTML = ''">
+				Cancel
+			</button>
+		</form>
+	</div>
+</div>

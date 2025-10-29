@@ -1,0 +1,12 @@
+{{if .Contacts}}
+<ul style="list-style: none; padding: 0; margin: 0;">
+	{{range .Contacts}}
+	<li style="padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;"
+		onclick="selectContact('{{.ID}}', '{{.Name | js}}')">
+		<strong>{{.Name}}</strong> <small>({{.Email}})</small>
+	</li>
+	{{end}}
+</ul>
+{{else}}
+<p style="padding: 8px; color: #888;">No contacts found matching your search.</p>
+{{end}}
