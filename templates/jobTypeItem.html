@@ -4,13 +4,14 @@
 		<small>{{.Description}}</small>
 	</div>
 	<div class="actions">
+		<button hx-get="/admin/job-types/{{.ID}}/fields" hx-target="#modal-placeholder" hx-swap="innerHTML"
+			class="btn btn-info btn-sm"> Fields
+		</button>
 		<button hx-get="/admin/job-types/edit/{{.ID}}" hx-target="closest li" hx-swap="outerHTML"
-			class="btn btn-secondary">
-			Edit
+			class="btn btn-secondary btn-sm"> Edit
 		</button>
 		<button hx-delete="/admin/job-types/{{.ID}}" hx-target="closest li" hx-swap="outerHTML"
-			hx-confirm="Are you sure you want to delete '{{.Name}}'?" class="btn btn-danger">
-			Delete
+			hx-confirm="Are you sure you want to delete '{{.Name}}'?" class="btn btn-danger btn-sm"> Delete
 		</button>
 	</div>
 </li>

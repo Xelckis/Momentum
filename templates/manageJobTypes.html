@@ -69,6 +69,77 @@
 		.htmx-request .htmx-indicator {
 			opacity: 1;
 		}
+
+		.modal-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, .5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1000
+		}
+
+		.modal-content {
+			background: white;
+			padding: 2em;
+			border-radius: 8px;
+			min-width: 500px;
+			max-width: 90%;
+			max-height: 80vh;
+			overflow-y: auto;
+		}
+
+		.field-list {
+			list-style: none;
+			padding: 0;
+			margin-bottom: 1em;
+		}
+
+		.field-item {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0.5em 0;
+			border-bottom: 1px solid #eee;
+		}
+
+		.field-item:last-child {
+			border-bottom: none;
+		}
+
+		.field-details span {
+			margin-right: 10px;
+			font-size: 0.9em;
+			color: #555;
+		}
+
+		.field-actions button {
+			font-size: 0.8em;
+		}
+
+		.add-field-form {
+			margin-top: 1.5em;
+			padding-top: 1em;
+			border-top: 1px dashed #ccc;
+		}
+
+		.add-field-form div {
+			margin-bottom: 0.5em;
+		}
+
+		.add-field-form label {
+			display: inline-block;
+			width: 100px;
+		}
+
+		.add-field-form input[type="text"],
+		.add-field-form select {
+			width: calc(100% - 110px);
+		}
 	</style>
 </head>
 
@@ -95,6 +166,8 @@
 		{{template "jobTypeItem.html" .}}
 		{{end}}
 	</ul>
+
+	<div id="modal-placeholder"></div>
 
 	<script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </body>

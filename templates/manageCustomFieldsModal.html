@@ -1,0 +1,95 @@
+<div class="modal-overlay">
+	<div class="modal-content" id="custom-fields-modal-content">
+		<h3>Manage Custom Fields for: {{.JobType.Name}}</h3>
+
+		<h4>Existing Fields</h4>
+		<ul class="field-list" id="current-fields-list">
+			{{if .CustomFields}}
+			{{range .CustomFields}}
+			<li class="field-item" id="field-{{.FieldName}}">
+				<div class="field-details">
+					<span><strong>Label:</strong> {{.FieldLabel}}</span>
+					<span><strong>Name:</strong> {{.FieldName}}</span>
+					<span><strong>Type:</strong> {{.FieldType}} {{if eq .FieldType "select"}}({{len
+						.Options}} options){{end}}</span> <span><strong>Required:</strong> {{if
+						.IsRequired}}Yes{{else}}No{{end}}</span>
+				</div>
+				<div class="field-actions">
+					<button class="btn btn-sm btn-danger"
+						hx-delete="/admin/job-types/{{$.JobType.ID}}/fields/{{.FieldName}}"
+						hx-target="closest li" hx-swap="outerHTML"
+						hx-confirm="Delete field '{{.FieldLabel}}'?">
+						Delete
+					</button>
+				</div>
+			</li>
+			{{end}}
+			{{else}}
+			<li id="no-fields-yet"><em>No custom fields defined yet.</em></li>
+			{{end}}
+		</ul>
+
+		<div class="add-field-form">
+			<h4>Add New Field</h4>
+			<form hx-post="/admin/job-types/{{.JobType.ID}}/fields" hx-target="#current-fields-list"
+				hx-swap="innerHTML"
+				hx-on::after-request="this.reset(); document.getElementById('select-options-wrapper').style.display='none';">
+				<div>
+					<label for="field_label">Field Label:</label>
+					<input type="text" id="field_label" name="field_label"
+						placeholder="e.g., Status" required>
+				</div>
+				<div>
+					<label for="field_name">Field Name:</label>
+					<input type="text" id="field_name" name="field_name"
+						placeholder="e.g., status (no spaces)" required pattern="[a-z0-9_]+">
+					<small>Use only lowercase letters, numbers, and underscores.</small>
+				</div>
+				<div>
+					<label for="field_type">Field Type:</label>
+					<select id="field_type" name="field_type" required
+						onchange="toggleSelectOptions(this.value)">
+						<option value="text">Text (Single Line)</option>
+						<option value="textarea">Text (Multi-Line)</option>
+						<option value="number">Number</option>
+						<option value="date">Date</option>
+						<option value="checkbox">Checkbox (Yes/No)</option>
+						<option value="select">Select (Dropdown)</option>
+					</select>
+				</div>
+
+				<div id="select-options-wrapper" style="display: none; margin-top: 0.5em;">
+					<label for="select_options">Dropdown Options (one per line):</label>
+					<textarea id="select_options" name="select_options" rows="4"
+						style="width: 100%;"
+						placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+					<small>Enter each choice on a new line.</small>
+				</div>
+				<div>
+					<label for="is_required">Required?</label>
+					<input type="checkbox" id="is_required" name="is_required" value="true">
+				</div>
+
+				<button type="submit">Add Field</button>
+			</form>
+			<div id="add-field-feedback"></div>
+		</div>
+
+		<hr style="margin-top: 2em; margin-bottom: 1em;">
+		<button type="button" onclick="document.getElementById('modal-placeholder').innerHTML = ''">
+			Close
+		</button>
+	</div>
+
+	<script>
+		function toggleSelectOptions(selectedValue) {
+			var optionsDiv = document.getElementById('select-options-wrapper');
+			if (selectedValue === 'select') {
+				optionsDiv.style.display = 'block';
+			} else {
+				optionsDiv.style.display = 'none';
+			}
+		}
+		toggleSelectOptions(document.getElementById('field_type').value);
+	</script>
+</div>
