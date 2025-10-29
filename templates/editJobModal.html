@@ -1,0 +1,140 @@
+<div class="modal-overlay">
+	<div class="modal-content">
+		<h3>Edit {{.Job.Title}} (Ticket: {{.Job.Ticket}})</h3>
+
+		<form hx-post="/jobs/edit/{{.Job.ID}}" hx-target="#add-job-feedback" hx-swap="innerHTML"
+			enctype="multipart/form-data">
+
+			<div id="add-job-feedback">
+				{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+			</div>
+
+			<h4>Standard Information</h4>
+			<div>
+				<label for="title">Title:</label>
+				<input type="text" id="title" name="title" value="{{.FormData.title}}" required>
+			</div>
+
+			<div style="margin-top: 1em;">
+				<label for="status">Status:</label>
+				<select id="status" name="status">
+					<option value="open" {{if eq .FormData.status "open" }}selected{{end}}>Open
+					</option>
+					<option value="closed" {{if eq .FormData.status "closed" }}selected{{end}}>
+						Closed</option>
+				</select>
+			</div>
+
+			<div style="margin-top: 1em;">
+				<label for="thumbnail">Thumbnail Image:</label>
+
+				{{with (index .Job.CustomFields "thumbnail_url")}}
+				<p style="margin-top: 5px; margin-bottom: 5px;">Current:</p>
+				<img src="/{{.}}" alt="Current thumbnail"
+					style="max-height: 100px; display: block; margin-bottom: 10px; border-radius: 4px;">
+				{{end}}
+
+				<input type="file" id="thumbnail" name="thumbnail_image"
+					accept="image/png, image/jpeg, image/webp">
+				<small>Leave blank to keep the current image.</small>
+			</div>
+
+
+			<hr style="margin: 1.5em 0;">
+
+			<h4>Client Contact</h4>
+			<input type="hidden" id="selected_contact_id" name="primary_contact_id"
+				value="{{.FormData.primary_contact_id}}">
+			<div>
+				<label for="contact_search">Search Contacts (Name or Email):</label>
+				<input type="search" id="contact_search" name="q_contact" placeholder="Start typing..."
+					hx-get="/api/contacts/search" hx-trigger="keyup changed delay:300ms, search"
+					hx-target="#contact-search-results" hx-swap="innerHTML"
+					hx-indicator="#contact-search-spinner" autocomplete="off">
+				<span id="contact-search-spinner" class="htmx-indicator">🔄</span>
+			</div>
+			<div id="contact-search-results"
+				style="max-height: 150px; overflow-y: auto; border: 1px solid #eee; margin-top: -1em; margin-bottom: 1em;">
+			</div>
+			<div style="margin-bottom: 1em;">
+				<strong>Selected Contact:</strong> <span id="selected-contact-name">
+					{{if .SelectedContactName}}{{.SelectedContactName}}{{else}}None{{end}}
+				</span>
+				<button type="button" onclick="selectContact('', 'None')"
+					style="margin-left: 10px; font-size: 0.8em;">Clear</button>
+			</div>
+
+			<hr style="margin: 1.5em 0;">
+
+			<h4>Specific Details ({{.Job.JobTypeName}})</h4>
+			{{if .CustomFieldDefs}}
+
+			{{range .CustomFieldDefs}}
+			{{$fieldDef := .}}
+
+			<div style="margin-bottom: 1em;">
+				<label for="custom_{{$fieldDef.FieldName}}">{{$fieldDef.FieldLabel}}:</label>
+
+				{{if eq $fieldDef.FieldType "textarea"}}
+				<textarea id="custom_{{$fieldDef.FieldName}}"
+					name="custom_fields[{{$fieldDef.FieldName}}]" rows="3" {{if
+					$fieldDef.IsRequired}}required{{end}} style="width: 100%;">{{index
+					$.FormData.custom_fields $fieldDef.FieldName}}</textarea>
+
+				{{else if eq $fieldDef.FieldType "select"}}
+				<select id="custom_{{$fieldDef.FieldName}}"
+					name="custom_fields[{{$fieldDef.FieldName}}]" {{if
+					$fieldDef.IsRequired}}required{{end}}>
+
+					{{range $fieldDef.Options}}
+					<option value="{{.}}" {{if eq . (index $.FormData.custom_fields
+						$fieldDef.FieldName)}}selected{{end}}>{{.}}</option>
+					{{end}}
+				</select>
+
+				{{else}}
+				<input type="{{or .FieldType " text"}}" id="custom_{{.FieldName}}"
+					name="custom_fields[{{.FieldName}}]"
+					value="{{index $.FormData.custom_fields .FieldName}}" {{if
+					.IsRequired}}required{{end}}>
+				{{end}}
+			</div>
+			{{end}}
+			{{else}}
+			<p><em>No specific fields defined for this job type.</em></p>
+			{{end}}
+
+			<hr style="margin: 1.5em 0;">
+
+			<h4>Add Job Update</h4>
+			<small style="display: block; margin-top: -1em; margin-bottom: 1em;">Add a new update
+				note while saving changes.</small>
+
+			<div style="margin-bottom: 1em;">
+				<label for="update_title">Update Title:</label>
+				<input type="text" id="update_title" name="update_title" style="width: 100%;" required>
+			</div>
+
+			<div style="margin-bottom: 1em;">
+				<label for="update_description">Update Description:</label>
+				<textarea id="update_description" name="update_description" rows="3"
+					style="width: 100%;"></textarea>
+			</div>
+			<hr style="margin-top: 2em; margin-bottom: 1em;">
+
+			<button type="submit">Save Changes</button>
+			<button type="button"
+				onclick="document.getElementById('modal-placeholder').innerHTML = ''">Cancel</button>
+		</form>
+
+		<div id="nested-modal-placeholder"></div>
+	</div>
+
+	<script>
+		function selectContact(id, name) {
+			document.getElementById('selected_contact_id').value = id;
+			document.getElementById('selected-contact-name').textContent = name;
+			document.getElementById('contact-search-results').innerHTML = '';
+		}
+	</script>
+</div>

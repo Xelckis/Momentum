@@ -1,0 +1,158 @@
+<div class="modal-overlay">
+	<div class="modal-content">
+		<h3>Add New {{.JobTypeName}}</h3>
+
+		<form hx-post="/jobs/add/{{.JobTypeId}}" hx-target="closest .modal-content" hx-swap="innerHTML"
+			enctype="multipart/form-data">
+
+
+			<div id="add-job-feedback">
+				{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+			</div>
+
+			<h4>Standard Information</h4>
+			<div>
+				<label for="title">Title:</label>
+				<input type="text" id="title" name="title" value="{{.FormData.title}}" required>
+			</div>
+
+			<div style="margin-top: 1em;">
+				<label for="thumbnail">Thumbnail Image:</label>
+				<input type="file" id="thumbnail" name="thumbnail_image"
+					accept="image/png, image/jpeg, image/webp">
+			</div>
+
+			<hr style="margin: 1.5em 0;">
+
+			<h4>Client Contact</h4>
+
+			<input type="hidden" id="selected_contact_id" name="primary_contact_id"
+				value="{{.FormData.primary_contact_id}}">
+
+			<div>
+
+				<label for="contact_search">Search Existing Contacts (Name or Email):</label>
+
+				<input type="search" id="contact_search" name="q_contact" placeholder="Start typing..."
+					hx-get="/api/contacts/search" hx-trigger="keyup changed delay:300ms, search"
+					hx-target="#contact-search-results" hx-swap="innerHTML"
+					hx-indicator="#contact-search-spinner" autocomplete="off">
+
+				<span id="contact-search-spinner" class="htmx-indicator">🔄</span>
+
+			</div>
+
+			<div id="contact-search-results"
+				style="max-height: 150px; overflow-y: auto; border: 1px solid #eee; margin-top: -1em; margin-bottom: 1em;">
+
+			</div>
+
+			<div style="margin-bottom: 1em;">
+
+				<strong>Selected Contact:</strong> <span id="selected-contact-name">
+
+					{{if .SelectedContactName}}{{.SelectedContactName}}{{else}}None{{end}}
+
+				</span>
+
+				<button type="button" onclick="selectContact('', 'None')"
+					style="margin-left: 10px; font-size: 0.8em;">Clear</button>
+
+			</div>
+
+
+			<hr style="margin: 1.5em 0;">
+
+
+			<h4>Job Specific Details ({{.JobTypeName}})</h4>
+
+			{{if .CustomFieldDefs}}
+
+			{{range .CustomFieldDefs}}
+
+			<div style="margin-bottom: 1em;">
+
+				<label for="custom_{{.FieldName}}">{{.FieldLabel}}:</label>
+
+
+				{{/* Render different input types based on definition */}}
+
+				{{if eq .FieldType "textarea"}}
+
+				<textarea id="custom_{{.FieldName}}" name="custom_fields[{{.FieldName}}]" rows="3" {{if
+					.IsRequired}}required{{end}} style="width: 100%;">{{index
+
+					$.FormData.custom_fields .FieldName}}</textarea>
+
+
+				{{else if eq .FieldType "select"}}
+
+				<select id="custom_{{.FieldName}}" name="custom_fields[{{.FieldName}}]" {{if
+					.IsRequired}}required{{end}}>
+
+					{{range .Options}}
+
+					<option value="{{.}}">{{.}}</option>
+
+					{{end}}
+
+				</select>
+
+
+				{{else}}
+
+				<input type="{{or .FieldType " text"}}" id="custom_{{.FieldName}}"
+					name="custom_fields[{{.FieldName}}]"
+					value="{{index $.FormData.custom_fields .FieldName}}" {{if
+					.IsRequired}}required{{end}}>
+
+				{{end}}
+
+				{{/* End of input type check */}}
+
+			</div>
+
+			{{end}}
+
+			{{/* End of range loop */}}
+
+			{{else}}
+
+			<p><em>No specific fields defined for this job type.</em></p>
+
+			{{end}}
+
+			{{/* End of CustomFieldDefs check */}}
+
+
+
+			<hr style="margin-top: 2em; margin-bottom: 1em;">
+
+
+			<button type="submit">Create Job</button>
+
+			<button type="button"
+				onclick="document.getElementById('modal-placeholder').innerHTML = ''">Cancel</button>
+
+		</form>
+
+
+
+	</div>
+
+
+	<script>
+
+		function selectContact(id, name) {
+
+			document.getElementById('selected_contact_id').value = id;
+
+			document.getElementById('selected-contact-name').textContent = name;
+
+			document.getElementById('contact-search-results').innerHTML = '';
+
+		}
+
+	</script>
+
+</div>

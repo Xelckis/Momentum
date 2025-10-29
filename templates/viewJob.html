@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Job Details: {{.Job.Ticket}}</title>
+	<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+	<style>
+		body {
+			font-family: sans-serif;
+			background-color: #f4f4f4;
+			padding: 20px;
+		}
+
+		.container {
+			max-width: 900px;
+			margin: auto;
+			background: white;
+			padding: 30px;
+			border-radius: 8px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		}
+
+		.job-header {
+			border-bottom: 1px solid #eee;
+			padding-bottom: 15px;
+			margin-bottom: 20px;
+		}
+
+		.job-header h2 {
+			margin: 0;
+			font-size: 2em;
+		}
+
+		.job-header .ticket {
+			color: #555;
+			font-size: 0.9em;
+		}
+
+		.job-details dl {
+			display: grid;
+			grid-template-columns: 150px 1fr;
+			gap: 10px 20px;
+		}
+
+		.job-details dt {
+			font-weight: bold;
+			color: #333;
+		}
+
+		.job-details dd {
+			margin: 0;
+			color: #555;
+		}
+
+		.updates-section {
+			margin-top: 40px;
+			border-top: 1px solid #eee;
+			padding-top: 20px;
+		}
+
+		.update-card {
+			background: #f9f9f9;
+			border: 1px solid #eee;
+			border-radius: 5px;
+			padding: 15px;
+			margin-bottom: 15px;
+		}
+
+		.update-card h5 {
+			margin: 0 0 10px 0;
+			font-size: 1.1em;
+		}
+
+		.update-card p {
+			margin: 5px 0;
+		}
+
+		.update-card small {
+			color: #777;
+			font-size: 0.8em;
+		}
+
+		.update-images img {
+			max-width: 100px;
+			height: auto;
+			margin-right: 5px;
+			border: 1px solid #ddd;
+			border-radius: 3px;
+		}
+
+		.load-more-container {
+			text-align: center;
+			padding: 20px;
+		}
+
+		.job-actions {
+			margin-top: 20px;
+			display: flex;
+			gap: 10px;
+		}
+
+		.button-view,
+		.button-edit,
+		.button-delete,
+		.button-update {
+			padding: 8px 12px;
+			border-radius: 4px;
+			text-decoration: none;
+			cursor: pointer;
+			border: none;
+		}
+
+		.button-edit {
+			background-color: #ffc107;
+			color: black;
+		}
+
+		.button-delete {
+			background-color: #dc3545;
+			color: white;
+		}
+
+		.button-update {
+			background-color: #17a2b8;
+			color: white;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<div class="job-header">
+			<h2>{{.Job.Title}}</h2>
+			<span class="ticket">Ticket: {{.Job.Ticket}} | Status: {{.Job.Status}}</span>
+		</div>
+
+		<div class="job-details">
+			<dl>
+				<dt>Job Type:</dt>
+				<dd>{{.Job.JobTypeName}}</dd>
+
+				<dt>Client Contact:</dt>
+				<dd>{{or .Job.ContactName "N/A"}}</dd>
+
+				<dt>Assigned To:</dt>
+				<dd>{{or .Job.AssignedUserName "N/A"}}</dd>
+
+				<dt>Created:</dt>
+				<dd>{{.Job.CreatedAt.Format "Jan 02, 2006 15:04 MST"}}</dd>
+
+				<dt>Last Modified:</dt>
+				<dd>{{.Job.UpdatedAt.Format "Jan 02, 2006 15:04 MST"}}</dd>
+
+				{{range $key, $value := .Job.CustomFields}}
+				{{if and $value (ne $key "thumbnail_url")}}
+				<dt>{{$key}}:</dt>
+				<dd>{{$value}}</dd>
+				{{end}}
+				{{end}}
+			</dl>
+		</div>
+
+		<div class="job-actions">
+			<a href="/jobs/{{.Job.ID}}/updates/new" class="button-update">Add Update</a>
+			<button type="button" class="button-edit" hx-get="/jobs/edit-form/{{.Job.ID}}"
+				hx-target="#modal-placeholder" hx-swap="innerHTML">
+				Edit Job
+			</button>
+			<button type="button" class="button-delete" hx-delete="/api/jobs/{{.Job.ID}}" hx-target="body"
+				hx-swap="innerHTML"
+				hx-confirm="Are you sure you want to delete '{{.Job.Title}}'? This action cannot be undone.">
+				Delete Job
+			</button>
+		</div>
+
+		<div class="updates-section">
+			<h3>Update History</h3>
+			<div id="job-updates-list">
+				<div id="load-updates-trigger" class="load-more-container"
+					hx-get="/api/jobs/{{.Job.ID}}/updates?limit=10&before=now" hx-trigger="load"
+					hx-swap="outerHTML">
+					Loading updates... <span class="htmx-indicator">🔄</span>
+				</div>
+			</div>
+		</div>
+
+	</div>
+
+	<div id="modal-placeholder"></div>
+
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+{{/* Renders a batch of job update cards */}}
+{{range .Updates}}
+<div class="update-card" id="update-{{.ID}}">
+	{{with (index .Content "title")}}
+	<h5>{{.}}</h5>
+	{{end}}
+
+	<p>
+		<small>Posted by {{.AuthorName}} on {{.CreatedAt.Format "Jan 02, 2006 at 15:04 MST"}}</small>
+	</p>
+
+	{{with (index .Content "description")}}
+	<p>{{.}}</p>
+	{{end}}
+
+	{{with (index .Content "img")}}
+	{{if .}}
+	<div class="update-images" style="margin-top: 10px;">
+		{{range .}}
+		<a href="{{.}}" target="_blank"><img src="{{.}}" alt="Update image"></a>
+		{{end}}
+	</div>
+	{{end}}
+	{{end}}
+</div>
+{{end}}
+
+{{if .NextUpdateCursor}}
+<div id="load-updates-trigger" class="load-more-container"
+	hx-get="/api/jobs/{{.JobID}}/updates?limit=10&before={{.NextUpdateCursor}}" hx-trigger="intersect once"
+	hx-swap="outerHTML">
+	Load More Updates... <span class="htmx-indicator">🔄</span>
+</div>
+{{end}}
+
+{{if not .NextUpdateCursor}}
+<div class="load-more-container">
+	<p>No more updates.</p>
+</div>
+{{end}}

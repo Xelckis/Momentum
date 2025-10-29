@@ -1,0 +1,74 @@
+{{range .Jobs}}
+<div class="job-card" id="job-card-{{.ID}}">
+
+	{{with (index .CustomFields "thumbnail_url")}}
+	<img src="{{.}}" alt="{{$.Title}} thumbnail" class="thumbnail">
+	{{else}}
+	<img src="/static/images/default.jpg" alt="{{$.Title}} thumbnail" class="thumbnail">
+	{{end}}
+
+	<div class="job-card-content">
+		<div class="job-card-header">
+			<div>
+				<h4 class="job-card-title">{{.Title}} <span class="job-card-status">({{.Status}})</span>
+				</h4>
+			</div>
+			<div class="job-card-id">ID: {{.Ticket}}</div>
+		</div>
+		<div class="job-card-details">
+			{{range $key, $value := .CustomFields}}
+			{{if and $value (ne $key "thumbnail_url")}}
+			<p>
+				<strong>{{$key}}:</strong>
+				{{$value}}
+			</p>
+			{{end}}
+			{{end}}
+		</div>
+		{{with .LastUpdate}}
+		<div class="job-card-update">
+			<p><strong>Last Update ({{.ID}}):</strong></p>
+			<p><strong>By:</strong> {{.AuthorName}} (User ID: {{.AuthorUserID}})</p>
+			<p><strong>Title:</strong> {{index .Content "title"}}</p>
+			{{if index .Content "img"}}
+			<p><strong>Images:</strong></p>
+			<div class="update-content-images">
+				{{range index .Content "img"}}
+				<img src="{{.}}" alt="Update image">
+				{{end}}
+			</div>
+			{{end}}
+		</div>
+		{{else}}
+		<div class="job-card-update">
+			<p><strong>No updates yet.</strong></p>
+		</div>
+		{{end}}
+
+		<div class="job-card-actions">
+
+			<a href="/jobs/{{.ID}}" class="button-view">View</a>
+
+			<a href="/jobs/{{.ID}}/updates/new" class="button-update">Update</a>
+			<button type="button" class="button-edit" hx-get="/jobs/edit-form/{{.ID}}"
+				hx-target="#modal-placeholder" hx-swap="innerHTML">
+				Edit
+			</button>
+
+			<button type="button" class="button-delete" hx-delete="/api/jobs/{{.ID}}"
+				hx-target="closest .job-card" hx-swap="outerHTML"
+				hx-confirm="Are you sure you want to delete '{{.Title}}' (Ticket: {{.Ticket}})?">
+				Delete
+			</button>
+		</div>
+	</div>
+</div>
+{{end}}
+
+{{/* Renders the NEXT trigger if there's more data. */}}
+{{if .NextCursor}}
+<div id="load-more-trigger" class="load-more-container" hx-get="/api/jobs/{{.JobTypeId}}?limit=20&after={{.NextCursor}}"
+	hx-trigger="intersect once" hx-swap="outerHTML">
+	Load More... <span class="htmx-indicator">🔄</span>
+</div>
+{{end}}

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Add Update to {{.Job.Ticket}}</title>
+	<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+	<style>
+		body {
+			font-family: 'Kantumruy Pro', sans-serif;
+			background-color: #f0f0f0;
+			color: #333;
+			margin: 0;
+			padding: 20px;
+		}
+
+		.container {
+			max-width: 800px;
+			margin: 20px auto;
+			padding: 20px;
+			background-color: white;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+		}
+
+		h3 {
+			font-family: 'Koulen', sans-serif;
+			font-size: 1.8em;
+			font-weight: normal;
+		}
+
+		form div {
+			margin-bottom: 1.5em;
+		}
+
+		form label {
+			display: block;
+			margin-bottom: 5px;
+			font-weight: 700;
+		}
+
+		form input[type="text"],
+		form textarea {
+			width: 100%;
+			padding: 8px;
+			box-sizing: border-box;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+		}
+
+		form textarea {
+			min-height: 120px;
+			resize: vertical;
+		}
+
+		.button-bar {
+			display: flex;
+			gap: 10px;
+			margin-top: 2em;
+		}
+
+		.button-bar button,
+		.button-bar a {
+			padding: 10px 15px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			text-decoration: none;
+			font-size: 1em;
+		}
+
+		.button-submit {
+			background-color: #007bff;
+			color: white;
+		}
+
+		.button-cancel {
+			background-color: #6c757d;
+			color: white;
+		}
+
+		.error {
+			color: #dc3545;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="container">
+
+		<h3>Add New Update for Job: {{.Job.Ticket}}</h3>
+		<p>Job Title: {{.Job.Title}}</p>
+		<form hx-post="/api/jobs/{{.Job.ID}}/updates" hx-target="this" hx-swap="outerHTML"
+			enctype="multipart/form-data">
+
+			<div id="update-feedback">
+				{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+			</div>
+
+			<div>
+				<label for="update_title">Update Title (Required)</label>
+				<input type="text" id="update_title" name="update_title"
+					value="{{.FormData.update_title}}" required>
+			</div>
+
+			<div>
+				<label for="update_description">Description</label>
+				<textarea id="update_description"
+					name="update_description">{{.FormData.update_description}}</textarea>
+			</div>
+
+			<div>
+				<label for="update_image">Image</label>
+				<input type="file" id="update_image" name="update_image"
+					accept="image/png, image/jpeg, image/webp">
+			</div>
+
+			<div class="button-bar">
+				<button type="submit" class="button-submit">Post Update</button>
+
+				<a href="/jobs/{{.Job.ID}}" class="button-cancel">Cancel</a>
+			</div>
+
+		</form>
+	</div>
+
+</body>
+
+</html>
