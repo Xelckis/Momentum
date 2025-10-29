@@ -14,6 +14,10 @@ func UserList(c *gin.Context) {
 		return
 	}
 
+	if pagination.Limit <= 0 || pagination.Limit > 50 {
+		pagination.Limit = 10
+	}
+
 	searchQuery := c.Query("q")
 
 	query := `

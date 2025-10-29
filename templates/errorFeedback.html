@@ -1,3 +1,6 @@
-<div class="error" style="padding: 1em; margin-bottom: 1em;">
-	{{.Message}}
+<div class="notification error">
+	<span>
+		<strong>Error:</strong> {{.Message}}
+	</span>
+	<button onclick="this.parentElement.remove()">×</button>
 </div>
