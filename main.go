@@ -8,6 +8,7 @@ import (
 
 	"Momentum/internal/config"
 	"Momentum/internal/database"
+	"Momentum/internal/logger"
 	"Momentum/internal/web"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,7 @@ func main() {
 	conn := database.ConnectDB()
 	defer conn.Close()
 
-	setupLogging()
+	logger.LogFileWriter = setupLogging()
 
 	ginRouter := setupGin()
 	serverHTTPS := config.LoadServerHTTPSConfig(c, ginRouter)
@@ -37,10 +38,11 @@ func main() {
 
 }
 
-func setupLogging() {
+func setupLogging() io.Writer {
 	gin.DisableConsoleColor()
 	f, _ := os.OpenFile("var/log/gin.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
+	return gin.DefaultWriter
 }
 
 func setupGin() *gin.Engine {

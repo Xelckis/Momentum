@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
+
+	"Momentum/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -80,6 +81,7 @@ func Login(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 	if username == "" || password == "" {
+		logger.LogToLogFile(c, "Login: All fields are required")
 		c.String(http.StatusBadRequest, "<div class='error'>All fields are required</div>")
 		return
 	}
@@ -88,20 +90,24 @@ func Login(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
+			logger.LogToLogFile(c, "Login: Wrong username")
 			c.String(http.StatusBadRequest, "<div class='error'>Invalid username or password</div>")
 			return
 		}
+		logger.LogToLogFile(c, fmt.Sprintf("Login [SQL]: Error while querying user username `%v`", err))
 		c.String(http.StatusBadRequest, "<div class='error'>Internal server error</div>")
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		logger.LogToLogFile(c, "Login: Wrong password")
 		c.String(http.StatusBadRequest, "<div class='error'>Invalid username or password</div>")
 		return
 	}
 
 	tokenString, err := jwt.CreateToken(username, user.Role, user.ID)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Login [JWT]: Error while creating JWT `%v`", err))
 		c.String(http.StatusBadRequest, "<div class='error'>Internal server error (JWT)</div>")
 		return
 	}
@@ -121,12 +127,14 @@ func Register(c *gin.Context) {
 	homePhone := c.PostForm("home_phone")
 
 	if role != "admin" && role != "user" {
+		logger.LogToLogFile(c, "Register: The user's role is not admin or user.")
 		c.Data(http.StatusUnprocessableEntity, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro: Invalid role.</div>`))
 		return
 	}
 
 	hashPassword, err := createPasswordHash(password)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Register [bcrypt]: Error while creating password hash `%v`", err))
 		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro: Internal server error</div>`))
 		return
 	}
@@ -147,11 +155,12 @@ func Register(c *gin.Context) {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "2350G" {
-			c.Data(http.StatusConflict, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro: Nome de usuário já está em uso.</div>`))
+			logger.LogToLogFile(c, "Register: Username alredy in use")
+			c.Data(http.StatusConflict, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Error: Username is already in use.</div>`))
 			return
 		}
-
-		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Erro interno do servidor ao criar usuário.</div>`))
+		logger.LogToLogFile(c, fmt.Sprintf("Register [SQL]: Error while inserting user into the database `%v`", err))
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(`<div id="form-feedback" class="error">Error: Internal Server Error, Try Again.</div>`))
 		return
 	}
 
@@ -165,24 +174,21 @@ func DeleteUser(c *gin.Context) {
 	loggedInUserIDAny, _ := c.Get("userID")
 	loggedInUserID, _ := loggedInUserIDAny.(string)
 	if idStr == loggedInUserID {
-		c.String(http.StatusForbidden, "Você não pode excluir sua própria conta.")
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.String(http.StatusBadRequest, "Inavalid User ID.")
+		logger.LogToLogFile(c, "Delete User: You cannot delete your own account")
+		c.String(http.StatusForbidden, "You cannot delete your own account")
 		return
 	}
 
 	query := "DELETE FROM users WHERE id = $1"
-	cmdTag, err := conn.Exec(c.Request.Context(), query, id)
+	cmdTag, err := conn.Exec(c.Request.Context(), query, idStr)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Internal server error")
+		logger.LogToLogFile(c, fmt.Sprintf("Delete User [SQL]: Error while deleting user from database `%v`", err))
+		c.String(http.StatusInternalServerError, "Internal Server Error, Try Again")
 		return
 	}
 
 	if cmdTag.RowsAffected() == 0 {
+		logger.LogToLogFile(c, "Delete User [SQL]: Error user not found")
 		c.String(http.StatusNotFound, "User not found.")
 		return
 	}
