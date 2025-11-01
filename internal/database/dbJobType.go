@@ -1,9 +1,9 @@
 package database
 
 import (
+	"Momentum/internal/logger"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +28,7 @@ func DeleteJobType(c *gin.Context) {
 	query := "DELETE FROM job_types WHERE id = $1"
 	cmdTag, err := conn.Exec(c.Request.Context(), query, id)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Delete Job Type [SQL]: Error while deleting from job_types table `%v`", err))
 		c.Header("HX-Retarget", "#add-form-feedback")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 			"Message": "Error: An internal error occurred. Please try again.",
@@ -53,6 +54,7 @@ func GetJobTypeHandler(c *gin.Context) {
 	err := job.findJobTypeByID(c, id)
 
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Get Job Type Handler: Error finding job {ID: %s} `%v`", id, err))
 		c.Header("HX-Retarget", "#add-form-feedback")
 
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -70,6 +72,7 @@ func EditJobTypeDB(c *gin.Context) {
 	description := c.PostForm("description")
 
 	if name == "" {
+		logger.LogToLogFile(c, "Edit Job Type DB: Name is empty")
 		c.Header("HX-Retarget", "#add-form-feedback")
 
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -84,6 +87,7 @@ func EditJobTypeDB(c *gin.Context) {
 
 	cmdTag, err := conn.Exec(c.Request.Context(), query, name, description, id)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Edit Job Type DB [SQL]: Error while updating job_types table `%v`", err))
 		c.Header("HX-Retarget", "#add-form-feedback")
 
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -93,6 +97,7 @@ func EditJobTypeDB(c *gin.Context) {
 	}
 
 	if cmdTag.RowsAffected() == 0 {
+		logger.LogToLogFile(c, "Edit Job Type DB [SQL]: No rows were affected by the update")
 		c.Header("HX-Retarget", "#add-form-feedback")
 
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -104,6 +109,7 @@ func EditJobTypeDB(c *gin.Context) {
 	var updatedJob jobType
 	err = updatedJob.findJobTypeByID(c, id)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Edit Job Type DB: Job type not found after changes `%v`", err))
 		c.Header("HX-Retarget", "#add-form-feedback")
 
 		c.HTML(http.StatusOK, "errorFe1022d1e9edback.html", gin.H{
@@ -124,6 +130,7 @@ func JobTypeEditForm(c *gin.Context) {
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			logger.LogToLogFile(c, fmt.Sprintf("Job Type Edit Form: Job Type %s not found", id))
 			c.Header("HX-Retarget", "#add-form-feedback")
 
 			c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -131,7 +138,7 @@ func JobTypeEditForm(c *gin.Context) {
 			})
 			return
 		}
-		log.Printf("Error fetching job type: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Job Type Edit Form: Error while fetching job type info `%v`", err))
 		c.Header("HX-Retarget", "#add-form-feedback")
 
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -161,12 +168,12 @@ func JobTypeList(c *gin.Context) {
 
 	rows, err := conn.Query(c.Request.Context(), query)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Job Type List [SQL]: Error while querying job_types table `%v`", err))
 		c.Header("HX-Retarget", "#add-form-feedback")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 			"Message": "An internal error occurred. Please try again.",
 		})
 
-		log.Printf("Failed to fetch job types: %v", err)
 		return
 	}
 	defer rows.Close()
@@ -175,12 +182,11 @@ func JobTypeList(c *gin.Context) {
 	for rows.Next() {
 		var job jobType
 		if err := rows.Scan(&job.ID, &job.Name, &job.Description, &job.CreatedAt); err != nil {
+			logger.LogToLogFile(c, fmt.Sprintf("Job Type List [SQL]: Error while scanning row `%v`", err))
 			c.Header("HX-Retarget", "#add-form-feedback")
 			c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 				"Message": "An internal error occurred. Please try again.",
 			})
-
-			log.Printf("failed to scan row: %v", err)
 			return
 		}
 		jobTypes = append(jobTypes, job)
@@ -188,7 +194,7 @@ func JobTypeList(c *gin.Context) {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Printf("error iterating rows: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Job Type List [SQL]: Error while iterating rows `%v`", err))
 		c.Header("HX-Retarget", "#add-form-feedback")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 			"Message": "An internal error occurred. Please try again.",
@@ -206,6 +212,7 @@ func CreateJobType(c *gin.Context) {
 	description := c.PostForm("description")
 
 	if name == "" {
+		logger.LogToLogFile(c, "Create Job Type: Name is empty")
 		c.Header("HX-Retarget", "#add-form-feedback")
 
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -222,13 +229,14 @@ func CreateJobType(c *gin.Context) {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			logger.LogToLogFile(c, fmt.Sprintf("Create Job Type [SQL]: The `%s` job type already exists", name))
 			c.Header("HX-Retarget", "#add-form-feedback")
 			c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 				"Message": "Error: A Job Type with this name already exists.",
 			})
 			return
 		}
-
+		logger.LogToLogFile(c, fmt.Sprintf("Create Job Type [SQL]: Error while inserting `%s` job type `%v`", name, err))
 		c.Header("HX-Retarget", "#add-form-feedback")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 			"Message": "An internal error occurred. Please try again.",

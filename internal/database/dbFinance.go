@@ -1,8 +1,9 @@
 package database
 
 import (
+	"Momentum/internal/logger"
 	"database/sql"
-	"log"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -28,6 +29,7 @@ type Finance struct {
 func FinanceList(c *gin.Context) {
 	var pagination PaginationFinance
 	if err := c.ShouldBindQuery(&pagination); err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Finance List [Bind Query]: Error while binding query to pagination struct `%v`", err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -39,7 +41,7 @@ func FinanceList(c *gin.Context) {
 	} else {
 		beforeTimestamp, err = time.Parse(time.RFC3339Nano, pagination.Before)
 		if err != nil {
-			log.Printf("Invalid 'before' timestamp format: %s", pagination.Before)
+			logger.LogToLogFile(c, fmt.Sprintf("Finance List [Before Time]: Invalid 'before' timestamp format: %s", pagination.Before))
 			c.String(http.StatusBadRequest, "Invalid 'before' parameter format.")
 			return
 		}
@@ -70,6 +72,7 @@ func FinanceList(c *gin.Context) {
 
 	rows, err := conn.Query(c.Request.Context(), query, beforeTimestamp, pagination.Limit)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Finance List [SQL]: Error querying financial_transactions table `%v`", err))
 		c.String(http.StatusInternalServerError, "An internal server error occurred, Try again.")
 		return
 	}
@@ -79,7 +82,7 @@ func FinanceList(c *gin.Context) {
 	for rows.Next() {
 		var record Finance
 		if err := rows.Scan(&record.ID, &record.Description, &record.Amount, &record.Type, &record.TransactionDate, &record.RelatedJobID, &record.CreatedAt); err != nil {
-			log.Printf("failed to scan row: %v", err)
+			logger.LogToLogFile(c, fmt.Sprintf("Finance List [SQL]: Failed to scan row `%v`", err))
 			c.String(http.StatusInternalServerError, "Error processing financial records.")
 			return
 		}
@@ -88,7 +91,7 @@ func FinanceList(c *gin.Context) {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Printf("error iterating rows: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Finance List [SQL]: Error interating rows `%v`", err))
 		c.String(http.StatusInternalServerError, "Error reading updates list.")
 		return
 	}
@@ -171,7 +174,7 @@ func AddNewFinancialRecord(c *gin.Context) {
 	_, err = conn.Exec(c.Request.Context(), query, description, amount, typeRecord, transactionDate, relatedJobIDNull)
 
 	if err != nil {
-		log.Println(err)
+		logger.LogToLogFile(c, fmt.Sprintf("Add New Financial Record [SQL]: Error while inserting record into financial_transactions `%v`", err))
 		c.HTML(http.StatusOK, "newFinancialRecordForm.html", gin.H{
 			"FormData":           formData,
 			"SelectedJobDisplay": "",

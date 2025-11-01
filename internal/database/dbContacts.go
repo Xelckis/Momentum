@@ -1,7 +1,8 @@
 package database
 
 import (
-	"log"
+	"Momentum/internal/logger"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -27,11 +28,10 @@ func SearchContact(c *gin.Context) {
 
 	rows, err := conn.Query(c.Request.Context(), query, searchValue)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Search Contact [SQL]: Failed to fetch contacts: %v", err))
 		c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 			"Error": "An internal error occurred while searching contact. Please try again.",
 		})
-
-		log.Printf("Failed to fetch contacts: %v", err)
 		return
 	}
 	defer rows.Close()
@@ -40,18 +40,17 @@ func SearchContact(c *gin.Context) {
 	for rows.Next() {
 		var contact Contact
 		if err := rows.Scan(&contact.ID, &contact.Name, &contact.Email, &contact.Phone); err != nil {
+			logger.LogToLogFile(c, fmt.Sprintf("Search Contact [SQL Row Scan]: Failed to scan row: %v", err))
 			c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 				"Error": "An internal error occurred while searching contact. Please try again.",
 			})
-
-			log.Printf("failed to scan row: %v", err)
 			return
 		}
 		contacts = append(contacts, contact)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Printf("error iterating rows: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Search Contact [SQL Row Scan]: Error while iterating rows `%v`", err))
 		c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 			"Error": "An internal error occurred while searching contact. Please try again.",
 		})
@@ -83,6 +82,7 @@ func CreateContact(c *gin.Context) {
 	err := conn.QueryRow(c.Request.Context(), query, name, email, phone).Scan(&newContact.ID, &newContact.Name, &newContact.Email)
 
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Create Contact [SQL]: Error to create a new contact `%v`", err))
 		c.HTML(http.StatusUnprocessableEntity, "addContactModal.html", gin.H{
 			"Error": "Failed to save contact. Please try again.",
 		})

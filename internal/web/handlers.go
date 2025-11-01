@@ -2,7 +2,8 @@ package web
 
 import (
 	"Momentum/internal/jwt"
-	"log"
+	"Momentum/internal/logger"
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -14,7 +15,7 @@ import (
 func WsLog(c *gin.Context) {
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Println("upgrade:", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Ws Log: Error while upgrading the HTTP Server to WebSocket protocol `%v`", err))
 		return
 	}
 

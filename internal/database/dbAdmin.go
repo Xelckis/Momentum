@@ -1,7 +1,8 @@
 package database
 
 import (
-	"log"
+	"Momentum/internal/logger"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +11,7 @@ import (
 func UserList(c *gin.Context) {
 	var pagination Pagination
 	if err := c.ShouldBindQuery(&pagination); err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("User List [Bind Query]: Error while binding query to pagination struct `%v`", err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -29,7 +31,7 @@ func UserList(c *gin.Context) {
 
 	rows, err := conn.Query(c.Request.Context(), query, pagination.After, pagination.Limit, searchQuery)
 	if err != nil {
-		log.Printf("failed to query items: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("User List [SQL]: Error while searching users on database `%v`", err))
 		return
 	}
 	defer rows.Close()
@@ -38,15 +40,15 @@ func UserList(c *gin.Context) {
 	for rows.Next() {
 		var user Users
 		if err := rows.Scan(&user.ID, &user.Username, &user.Role, &user.FullName, &user.LocationContact, &user.WorkPhone, &user.HomePhone, &user.CreatedAt, &user.UpdatedAt); err != nil {
-			log.Printf("failed to scan row: %v", err)
+			logger.LogToLogFile(c, fmt.Sprintf("User List [SQL Row Scan]: Error while scanning rows `%v`", err))
 			return
 		}
 		users = append(users, user)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Printf("error iterating rows: %v", err)
-		c.String(http.StatusInternalServerError, "Erro ao ler lista de usuários.")
+		logger.LogToLogFile(c, fmt.Sprintf("User List [SQL Row Scan]: Error while iterating rows `%v`", err))
+		c.String(http.StatusInternalServerError, "Error reading user list.")
 		return
 	}
 
@@ -77,11 +79,13 @@ func EditUserDB(c *gin.Context) {
 
 	cmdTag, err := conn.Exec(c.Request.Context(), query, fullName, role, locationContact, workPhone, homePhone, id)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Edit User DB [SQL]: Error while updating database `%v`", err))
 		c.String(http.StatusInternalServerError, "Error saving changes.")
 		return
 	}
 
 	if cmdTag.RowsAffected() == 0 {
+		logger.LogToLogFile(c, "Edit User DB [SQL]: Error user not found on database")
 		c.String(http.StatusNotFound, "Error user not found")
 		return
 	}
@@ -89,6 +93,7 @@ func EditUserDB(c *gin.Context) {
 	var updatedUser Users
 	err = updatedUser.findUserByID(c, id)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Edit User DB: User not found after changes. `%v`", err))
 		c.String(http.StatusNotFound, "User not found after changes.")
 		return
 	}
@@ -107,6 +112,7 @@ func EditUserPage(c *gin.Context) {
 	var user Users
 	err := user.findUserByID(c, id)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Edit User Page: User not found `%v`", err))
 		c.String(http.StatusNotFound, "User not found")
 		return
 	}

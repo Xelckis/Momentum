@@ -1,11 +1,11 @@
 package database
 
 import (
+	"Momentum/internal/logger"
 	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"regexp"
 	"slices"
@@ -32,6 +32,7 @@ func GetCustomFieldsHandler(c *gin.Context) {
 	queryName := "SELECT name FROM job_types WHERE id = $1"
 	err := conn.QueryRow(c.Request.Context(), queryName, id).Scan(&jt.Name)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Get Custom Fields [SQL]: Error while querying name from job_types table `%v`", err))
 		c.String(http.StatusNotFound, "Job Type not found")
 		return
 	}
@@ -52,11 +53,11 @@ func (currentFields *CustomFieldDefList) fetchCurrentCustomFields(c *gin.Context
 	err := conn.QueryRow(c.Request.Context(), queryFields, id).Scan(&definitionsJSON)
 
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		log.Printf("Error fetching custom fields for job type %s: %v", id, err)
+		logger.LogToLogFile(c, fmt.Sprintf("Fetch Current Custom Fields [SQL]: Error fetching custom fields for job type %s: %v", id, err))
 	} else if definitionsJSON != nil {
 		err = json.Unmarshal(definitionsJSON, currentFields)
 		if err != nil {
-			log.Printf("Error unmarshaling custom fields for job type %s: %v", id, err)
+			logger.LogToLogFile(c, fmt.Sprintf("Fetch Current Custom Fields [Unmarshal]: Error unmarshaling custom fields for job type %s: %v", id, err))
 			c.String(http.StatusInternalServerError, "Could not parse field definitions")
 			return
 		}
@@ -67,7 +68,7 @@ func (currentFields *CustomFieldDefList) fetchCurrentCustomFields(c *gin.Context
 func updateCustomFieldsDB(c *gin.Context, currentFields CustomFieldDefList, id string) {
 	newCustomFieldsJSON, err := json.Marshal(currentFields)
 	if err != nil {
-		log.Printf("Error marshaling custom fields for job type %s: %v", id, err)
+		logger.LogToLogFile(c, fmt.Sprintf("Update Custom Fields [Marshal]: Error marshaling custom fields for job type %s: %v", id, err))
 		return
 	}
 
@@ -79,12 +80,12 @@ func updateCustomFieldsDB(c *gin.Context, currentFields CustomFieldDefList, id s
 
 	cmdTag, err := conn.Exec(c.Request.Context(), query, newCustomFieldsJSON, id)
 	if err != nil {
-		log.Printf("Error updating custom fields for job type %s: %v", id, err)
+		logger.LogToLogFile(c, fmt.Sprintf("Update Custom Fields [SQL]: Error updating custom fields for job type %s: %v", id, err))
 		return
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		log.Printf("Error finding custom fields for job type %s: %v", id, err)
+		logger.LogToLogFile(c, fmt.Sprintf("Update Custom Fields [SQL]: Error finding custom fields for job type %s: %v", id, err))
 		return
 	}
 
@@ -106,7 +107,8 @@ func DeleteCustomFields(c *gin.Context) {
 	})
 
 	if !found {
-		log.Printf("Field '%s' not found for job type %s, nothing to delete.", fieldName, id)
+		logger.LogToLogFile(c, fmt.Sprintf("Field '%s' not found for job type %s, nothing to delete.", fieldName, id))
+		return
 	}
 
 	updateCustomFieldsDB(c, updatedFields, id)
@@ -125,6 +127,7 @@ func AddNewCustomFields(c *gin.Context) {
 	var optionsSlice []string
 
 	if newFieldName == "" || newFieldLabel == "" || newFieldType == "" {
+		logger.LogToLogFile(c, "Add New Custom Fields: newFieldName or newFieldLabel or newFieldType is empty")
 		return
 	}
 
@@ -133,18 +136,20 @@ func AddNewCustomFields(c *gin.Context) {
 	}
 	isValidFormat, _ := regexp.MatchString(`^[a-z0-9_]+$`, newFieldName)
 	if !isValidFormat {
+		logger.LogToLogFile(c, fmt.Sprintf("Add New Custom Fields: newFieldName is not a valid name [%s]", newFieldName))
 		return
 	}
 
 	fieldNameExists, _ := customFieldNameExist(c, id, newFieldName)
 	if fieldNameExists {
-		log.Println("Field alredy exist")
+		logger.LogToLogFile(c, fmt.Sprintf("Add New Custom Fields: Custom field [%s] alredy exist", newFieldName))
 		return
 	}
 
 	if newFieldType == "select" {
 		optionsStr := c.PostForm("select_options")
 		if optionsStr == "" {
+			logger.LogToLogFile(c, "Add New Custom Fields: Select field type there is no options.")
 			c.Header("HX-Retarget", "#add-field-feedback")
 			c.HTML(http.StatusUnprocessableEntity, "errorFeedback.html", gin.H{"Message": "Error: Select field type requires options."})
 			return
@@ -161,6 +166,7 @@ func AddNewCustomFields(c *gin.Context) {
 		}
 
 		if len(optionsSlice) == 0 {
+			logger.LogToLogFile(c, "Add New Custom Fields: Select field options is empty.")
 			c.Header("HX-Retarget", "#add-field-feedback")
 			c.HTML(http.StatusUnprocessableEntity, "errorFeedback.html", gin.H{"Message": "Error: Select field options cannot be empty."})
 			return
@@ -200,7 +206,7 @@ func customFieldNameExist(c *gin.Context, id, fieldName string) (bool, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
-		log.Printf("Error checking custom field existence for job type %s: %v", id, err)
+		logger.LogToLogFile(c, fmt.Sprintf("custom Field Name Exist [SQL]: Error checking custom field existence for job type %s: %v", id, err))
 		return false, err
 	}
 	return exists, nil

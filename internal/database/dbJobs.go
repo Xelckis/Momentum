@@ -1,14 +1,12 @@
 package database
 
 import (
+	"Momentum/internal/logger"
 	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -47,6 +45,7 @@ func Jobs(c *gin.Context) {
 
 	jobTypeName, err := getJobTypeName(c, jobTypeId)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Jobs: Error while search for job type name {ID: %s} `%v`", jobTypeId, err))
 		c.String(http.StatusNotFound, "Job type not found")
 		return
 	}
@@ -61,6 +60,7 @@ func NewJobModal(c *gin.Context) {
 	jobTypeId := c.Param("id")
 	jobTypeName, err := getJobTypeName(c, jobTypeId)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("New Job Modal: Error while search for job type name {ID: %s} `%v`", jobTypeId, err))
 		c.Header("HX-Retarget", "#modal-placeholder")
 		c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 			"Error": "Error: An internal error occurred. Please try again.",
@@ -92,6 +92,7 @@ func AddNewJob(c *gin.Context) {
 
 	loggedInUserID, ok := c.Get("userID")
 	if !ok {
+		logger.LogToLogFile(c, "Add New Job: Failed to get userID")
 		c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 			"Error": "Failed to get userID",
 		})
@@ -114,6 +115,7 @@ func AddNewJob(c *gin.Context) {
 			})
 			return
 		} else {
+			logger.LogToLogFile(c, fmt.Sprintf("Add New Job: Error while processing uploaded thumbnail file `%v`", err))
 			c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 				"Error": "Error processing uploaded file.",
 			})
@@ -127,16 +129,18 @@ func AddNewJob(c *gin.Context) {
 	for i := 0; i < maxAttempts; i++ {
 		ticket, err = generateTicketID()
 		if err != nil {
+			logger.LogToLogFile(c, fmt.Sprintf("Add New Job: Error while generating job ticket `%v`", err))
 			c.HTML(http.StatusOK, "addJobModal.html", gin.H{
-				"Error": "Error creating job ticket (generation failed).",
+				"Error": "Error creating job ticket.",
 			})
 			return
 		}
 
 		exist, checkErr := checkTicketExists(c, ticket)
 		if checkErr != nil {
+			logger.LogToLogFile(c, fmt.Sprintf("Add New Job: Error while verifying job ticket `%v`", err))
 			c.HTML(http.StatusOK, "addJobModal.html", gin.H{
-				"Error": "Error verifying job ticket (database error).",
+				"Error": "Error verifying job ticket.",
 			})
 			return
 		}
@@ -146,11 +150,10 @@ func AddNewJob(c *gin.Context) {
 			break
 		}
 
-		log.Printf("Ticket ID collision detected: %s. Retrying... (Attempt %d/%d)", ticket, i+1, maxAttempts)
 	}
 
 	if !foundUnique {
-		log.Printf("Failed to generate unique ticket ID after %d attempts.", maxAttempts)
+		logger.LogToLogFile(c, fmt.Sprintf("Add New Job: Failed to genarate unique ticket ID after %d attempts", maxAttempts))
 		c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 			"Error": "Could not generate a unique ticket ID. Please try again later.",
 		})
@@ -167,7 +170,7 @@ func AddNewJob(c *gin.Context) {
 		ext := strings.ToLower(filepath.Ext(file.Filename))
 
 		if !allowedImageTypes[ext] {
-			log.Printf("Tipo de arquivo inválido recebido: %s", ext)
+			logger.LogToLogFile(c, fmt.Sprintf("Add New Job: Invalid file extension: %s", ext))
 
 			c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 				"Error": "Invalid file type. Only .jpg, .jpeg, .png, .webp are allowed.",
@@ -179,22 +182,11 @@ func AddNewJob(c *gin.Context) {
 
 		destinationPath := filepath.Join("./uploads/thumbnails/", newFileName)
 
-		src, err := file.Open()
-		if err != nil {
-			log.Printf("Erro ao abrir arquivo enviado: %v", err)
-			return
-		}
-		defer src.Close()
-
-		dst, err := os.Create(destinationPath)
-		if err != nil {
-			log.Printf("Erro ao criar arquivo de destino: %v", err)
-			return
-		}
-		defer dst.Close()
-
-		if _, err = io.Copy(dst, src); err != nil {
-			log.Printf("Erro ao salvar arquivo: %v", err)
+		if err := c.SaveUploadedFile(file, destinationPath); err != nil {
+			logger.LogToLogFile(c, fmt.Sprintf("Add New Job: Error while saving the thumbanil `%v`", err))
+			c.HTML(http.StatusOK, "addJobModal.html", gin.H{
+				"Error": "Error saving the thumbanil",
+			})
 			return
 		}
 
@@ -206,8 +198,9 @@ func AddNewJob(c *gin.Context) {
 	var jobId string
 	err = conn.QueryRow(c.Request.Context(), query, ticket, title, jobTypeId, contactID, loggedInUserID, customFields).Scan(&jobId)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Add New Job [SQL]: Error while inserting into jobs table `%v`", err))
 		c.HTML(http.StatusOK, "addContactModal.html", gin.H{
-			"Error": "Failed to save contact. Please try again.",
+			"Error": "An internal server error occurred. Please try again.",
 		})
 		return
 	}
@@ -218,8 +211,9 @@ func AddNewJob(c *gin.Context) {
 
 	jobUpdateMessage, err := json.Marshal(jsonDataMap)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Add New Job [Marshal]: Error while marshaling the default job update message `%v`", err))
 		c.HTML(http.StatusOK, "addContactModal.html", gin.H{
-			"Error": "An internal error occurred while creating the job. Please try again.",
+			"Error": "The job was added without the default job update message",
 		})
 		return
 	}
@@ -227,6 +221,7 @@ func AddNewJob(c *gin.Context) {
 	jobUpdateQuery := `INSERT INTO job_updates (job_id, author_user_id, content) VALUES ($1, $2, $3)`
 	_, err = conn.Exec(c.Request.Context(), jobUpdateQuery, jobId, loggedInUserID, jobUpdateMessage)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Add New Job [SQL]: Error while inserting into job_updates table `%v`", err))
 		c.HTML(http.StatusOK, "addJobModal.html", gin.H{
 			"Error": "Failed to save the initial job note. The job was created, but the note was not. Please add the note manually.",
 		})
@@ -265,6 +260,7 @@ func DeleteJob(c *gin.Context) {
 	query := `SELECT assigned_to_user_id FROM jobs WHERE id = $1`
 	err := conn.QueryRow(c.Request.Context(), query, jobID).Scan(&assignedToUserId)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Delete Job [SQL]: Error while getting assigned_to_user_id from jobs where id = %s `%v`", jobID, err))
 		c.Header("HX-Retarget", "#global-notification-placeholder")
 		c.Header("HX-Reswap", "innerHTML")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -276,6 +272,7 @@ func DeleteJob(c *gin.Context) {
 
 	loggedInUserID, ok := c.Get("userID")
 	if !ok {
+		logger.LogToLogFile(c, "Delete Job: Error to get userID")
 		c.Header("HX-Retarget", "#global-notification-placeholder")
 		c.Header("HX-Reswap", "innerHTML")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -287,6 +284,7 @@ func DeleteJob(c *gin.Context) {
 
 	loggedInUserRole, ok := c.Get("role")
 	if !ok {
+		logger.LogToLogFile(c, "Delete Job: Error to get user role")
 		c.Header("HX-Retarget", "#global-notification-placeholder")
 		c.Header("HX-Reswap", "innerHTML")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -297,6 +295,7 @@ func DeleteJob(c *gin.Context) {
 	}
 
 	if loggedInUserID.(string) != assignedToUserId && loggedInUserRole != "admin" {
+		logger.LogToLogFile(c, fmt.Sprintf("Delete Job: User %s do not have permission to delete this job", loggedInUserID))
 		c.Header("HX-Retarget", "#global-notification-placeholder")
 		c.Header("HX-Reswap", "innerHTML")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -309,6 +308,7 @@ func DeleteJob(c *gin.Context) {
 	deleteQuery := `DELETE FROM jobs WHERE id = $1`
 	_, err = conn.Exec(c.Request.Context(), deleteQuery, jobID)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Delete Job [SQL]: Error to delete job from jobs where id = %s `%v`", jobID, err))
 		c.Header("HX-Retarget", "#global-notification-placeholder")
 		c.Header("HX-Reswap", "innerHTML")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
@@ -326,6 +326,7 @@ func JobsList(c *gin.Context) {
 	jobTypeId := c.Param("id")
 	var pagination Pagination
 	if err := c.ShouldBindQuery(&pagination); err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Jobs List [Bind Query]: Error while binding query to pagination struct `%v`", err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -375,7 +376,7 @@ func JobsList(c *gin.Context) {
 
 	rows, err := conn.Query(c.Request.Context(), query, pagination.After, jobTypeId, pagination.Limit)
 	if err != nil {
-		log.Printf("failed to query items: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Jobs List [SQL]: Error while querying items `%v`", err))
 		return
 	}
 	defer rows.Close()
@@ -390,7 +391,7 @@ func JobsList(c *gin.Context) {
 		var lastUpdateCreatedAt sql.NullTime
 
 		if err := rows.Scan(&job.ID, &job.Title, &job.Status, &job.Ticket, &job.CustomFields, &lastUpdateID, &lastUpdateAuthorID, &lastUpdateContent, &lastUpdateCreatedAt, &lastUpdateAuthorName); err != nil {
-			log.Printf("failed to scan row: %v", err)
+			logger.LogToLogFile(c, fmt.Sprintf("Jobs List [SQL]: Error while scanning row `%v`", err))
 			return
 		}
 
@@ -408,7 +409,7 @@ func JobsList(c *gin.Context) {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Printf("error iterating rows: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Jobs List [SQL]: Error while iterating rows `%v`", err))
 		c.String(http.StatusInternalServerError, "Error reading jobs list.")
 		return
 	}
@@ -435,7 +436,6 @@ func generateTicketID() (string, error) {
 
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		log.Printf("Critical error generating random bytes:: %v", err)
 		return "", fmt.Errorf("failed to generate random part of ticket: %w", err)
 	}
 
@@ -489,6 +489,7 @@ func EditJobModal(c *gin.Context) {
 	)
 
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Edit Job Modal [SQL]: Error while querying jobs and contacts table `%v`", err))
 		c.String(http.StatusNotFound, "Job not found.")
 		return
 	}
@@ -498,6 +499,7 @@ func EditJobModal(c *gin.Context) {
 
 	var customFieldsMap map[string]any
 	if err := json.Unmarshal(jobData.CustomFields, &customFieldsMap); err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Edit Job Modal [Unmarshal]: Error while unmarshaling custom fields `%v`", err))
 		c.String(http.StatusInternalServerError, "An internal error occurred while creating the job. Please try again.")
 		return
 	}
@@ -530,6 +532,7 @@ func EditJob(c *gin.Context) {
 	imgUUID := uuid.New()
 	loggedInUserID, ok := c.Get("userID")
 	if !ok {
+		logger.LogToLogFile(c, "Edit Job: Error to get userID")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 			"Message": "An internal error occurred while editing the job. Please try again.",
 		})
@@ -546,6 +549,7 @@ func EditJob(c *gin.Context) {
 	jobUpdateDescription := c.PostForm("update_description")
 
 	if jobTitle == "" || primaryContactID == "" || jobUpdateTitle == "" {
+		logger.LogToLogFile(c, "Edit Job: Error to get userID")
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 			"Message": "Title, Contanct and Update Title is must.",
 		})
@@ -554,6 +558,7 @@ func EditJob(c *gin.Context) {
 
 	if err != nil {
 		if err != http.ErrMissingFile {
+			logger.LogToLogFile(c, fmt.Sprintf("Edit Job: Error while processing uploaded thumbnail file `%v`", err))
 			c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 				"Message": "Error processing uploaded file.",
 			})
@@ -571,6 +576,7 @@ func EditJob(c *gin.Context) {
 		ext := strings.ToLower(filepath.Ext(jobThumbnail.Filename))
 
 		if !allowedImageTypes[ext] {
+			logger.LogToLogFile(c, fmt.Sprintf("Edit Job: Invalid file extension: %s", ext))
 			c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 				"Message": "Invalid file type. Only .jpg, .jpeg, .png, .webp are allowed.",
 			})
@@ -582,6 +588,7 @@ func EditJob(c *gin.Context) {
 		destinationPath := filepath.Join("./uploads/thumbnails/", newFileName)
 
 		if err := c.SaveUploadedFile(jobThumbnail, destinationPath); err != nil {
+			logger.LogToLogFile(c, fmt.Sprintf("Edit Job: Error while saving the thumbanil `%v`", err))
 			c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 				"Message": "Error saving the new thumbanil",
 			})
@@ -598,6 +605,7 @@ func EditJob(c *gin.Context) {
 
 	jobUpdateContent, err := json.Marshal(contentMap)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Edit Job [Marshal]: Error while marshaling job update `%v`", err))
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 			"Message": "Error processing the job update.",
 		})
@@ -621,7 +629,7 @@ func EditJob(c *gin.Context) {
 
 	_, err = conn.Exec(c.Request.Context(), query, jobID, jobTitle, jobStatus, primaryContactID, customFields, loggedInUserID, jobUpdateContent)
 	if err != nil {
-		log.Println(err)
+		logger.LogToLogFile(c, fmt.Sprintf("Edit Job [SQL]: Error while inserting into job_updates `%v`", err))
 		c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
 			"Message": "An internal error occurred while editing the job. Please try again.",
 		})
@@ -639,6 +647,7 @@ func NewJobUpdateModal(c *gin.Context) {
 
 	err := conn.QueryRow(c.Request.Context(), query, jobID).Scan(&job.ID, &job.Ticket, &job.Title)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("New Job Update Modal [SQL]: Error while querying from jobs where id = %s `%v`", jobID, err))
 		c.String(http.StatusNotFound, "Job not found")
 		return
 	}
@@ -667,7 +676,6 @@ func getJobForTemplate(c *gin.Context, jobID string) (gin.H, error) {
 		&jobData.Ticket,
 	)
 	if err != nil {
-		log.Printf("Erro ao buscar job %s para renderizar erro: %v", jobID, err)
 		return nil, err
 	}
 	return gin.H{
@@ -682,6 +690,7 @@ func NewJobUpdate(c *gin.Context) {
 
 	loggedInUserID, ok := c.Get("userID")
 	if !ok {
+		logger.LogToLogFile(c, "New Job Update: Error to get userID")
 		c.HTML(http.StatusOK, "newJobUpdate.html", gin.H{
 			"Error": "An internal error occurred while creating the job update. Please try again.",
 		})
@@ -699,7 +708,8 @@ func NewJobUpdate(c *gin.Context) {
 	renderError := func(errMsg string) {
 		jobData, err := getJobForTemplate(c, jobID)
 		if err != nil {
-			c.String(http.StatusNotFound, "Job not found or internal error.")
+			logger.LogToLogFile(c, fmt.Sprintf("New Job Update: Error getting job info `%v`", err))
+			c.String(http.StatusNotFound, "Job not found.")
 			return
 		}
 
@@ -718,6 +728,7 @@ func NewJobUpdate(c *gin.Context) {
 	updateImgForm, err := c.FormFile("update_image")
 	if err != nil {
 		if err != http.ErrMissingFile {
+			logger.LogToLogFile(c, fmt.Sprintf("New Job Update: Error while processing uploaded file `%v`", err))
 			renderError("Error processing uploaded file.")
 			return
 		}
@@ -735,6 +746,7 @@ func NewJobUpdate(c *gin.Context) {
 		ext := strings.ToLower(filepath.Ext(updateImgForm.Filename))
 
 		if !allowedImageTypes[ext] {
+			logger.LogToLogFile(c, fmt.Sprintf("New Job Update: Invalid file extension %s", ext))
 			renderError("Invalid file type. Only .jpg, .jpeg, .png, .webp are allowed.")
 			return
 		}
@@ -743,22 +755,11 @@ func NewJobUpdate(c *gin.Context) {
 
 		destinationPath := filepath.Join("./uploads/thumbnails/", newFileName)
 
-		src, err := updateImgForm.Open()
-		if err != nil {
-			log.Printf("Erro ao abrir arquivo enviado: %v", err)
-			return
-		}
-		defer src.Close()
-
-		dst, err := os.Create(destinationPath)
-		if err != nil {
-			log.Printf("Erro ao criar arquivo de destino: %v", err)
-			return
-		}
-		defer dst.Close()
-
-		if _, err = io.Copy(dst, src); err != nil {
-			log.Printf("Erro ao salvar arquivo: %v", err)
+		if err := c.SaveUploadedFile(updateImgForm, destinationPath); err != nil {
+			logger.LogToLogFile(c, fmt.Sprintf("New Job Update: Error while saving the thumbanil `%v`", err))
+			c.HTML(http.StatusOK, "errorFeedback.html", gin.H{
+				"Message": "Error saving the new thumbanil",
+			})
 			return
 		}
 
@@ -775,6 +776,7 @@ func NewJobUpdate(c *gin.Context) {
 
 	jobUpdateContent, err := json.Marshal(contentMap)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("New Job Update [Marshal]: Error while marshaling job update `%v`", err))
 		renderError("An internal error occurred while creating the job update.")
 		return
 	}
@@ -782,6 +784,7 @@ func NewJobUpdate(c *gin.Context) {
 	jobUpdateQuery := `INSERT INTO job_updates (job_id, author_user_id, content) VALUES ($1, $2, $3)`
 	_, err = conn.Exec(c.Request.Context(), jobUpdateQuery, jobID, loggedInUserID, jobUpdateContent)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("New Job Update [SQL]: Error while inserting into job_updates `%v`", err))
 		renderError("Failed to save the job update. Please try again.")
 		return
 	}
@@ -831,6 +834,7 @@ func JobView(c *gin.Context) {
 
 	err := conn.QueryRow(c.Request.Context(), query, jobID).Scan(&jobData.ID, &jobData.Title, &jobData.Ticket, &jobData.Status, &jobData.CustomFields, &jobData.JobTypeName, &jobData.ContactName, &jobData.AssignedUserName, &jobData.CreatedAt, &jobData.UpdatedAt)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Job View [SQL]: Error while querying `%v`", err))
 		c.String(http.StatusNotFound, "Job not found")
 		return
 	}
@@ -845,6 +849,7 @@ func JobUpdateHistory(c *gin.Context) {
 	jobID := c.Param("id")
 	var pagination PaginationUpdates
 	if err := c.ShouldBindQuery(&pagination); err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Job Update History [Bind Query]: Error while binding query to pagination struct `%v`", err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -856,7 +861,7 @@ func JobUpdateHistory(c *gin.Context) {
 	} else {
 		beforeTimestamp, err = time.Parse(time.RFC3339Nano, pagination.Before)
 		if err != nil {
-			log.Printf("Invalid 'before' timestamp format: %s", pagination.Before)
+			logger.LogToLogFile(c, fmt.Sprintf("Job Update History: Invalid `before` timestamp format `%s`", pagination.Before))
 			c.String(http.StatusBadRequest, "Invalid 'before' parameter format.")
 			return
 		}
@@ -887,7 +892,7 @@ func JobUpdateHistory(c *gin.Context) {
 
 	rows, err := conn.Query(c.Request.Context(), query, jobID, beforeTimestamp, pagination.Limit)
 	if err != nil {
-		log.Printf("failed to query items: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Job Update History [SQL]: Error while querying items `%v`", err))
 		c.String(http.StatusInternalServerError, "Error fetching updates.")
 		return
 	}
@@ -897,7 +902,7 @@ func JobUpdateHistory(c *gin.Context) {
 	for rows.Next() {
 		var job JobUpdate
 		if err := rows.Scan(&job.ID, &job.AuthorName, &job.CreatedAt, &job.Content); err != nil {
-			log.Printf("failed to scan row: %v", err)
+			logger.LogToLogFile(c, fmt.Sprintf("Job Update History [SQL]: Error while scanning row `%v`", err))
 			c.String(http.StatusInternalServerError, "Error processing updates.")
 			return
 		}
@@ -906,7 +911,7 @@ func JobUpdateHistory(c *gin.Context) {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Printf("error iterating rows: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Job Update History [SQL]: Error while iterating rows `%v`", err))
 		c.String(http.StatusInternalServerError, "Error reading updates list.")
 		return
 	}
@@ -936,11 +941,11 @@ func SearchJobFinances(c *gin.Context) {
 
 	rows, err := conn.Query(c.Request.Context(), query, searchValue)
 	if err != nil {
+		logger.LogToLogFile(c, fmt.Sprintf("Search Job Finances [SQL]: Error while querying jobs table `%v`", err))
 		c.HTML(http.StatusOK, "_jobSearchResultsFinances.html", gin.H{
 			"Error": "An internal error occurred while searching jobs. Please try again.",
 		})
 
-		log.Printf("Failed to fetch jobs: %v", err)
 		return
 	}
 	defer rows.Close()
@@ -949,18 +954,18 @@ func SearchJobFinances(c *gin.Context) {
 	for rows.Next() {
 		var job Job
 		if err := rows.Scan(&job.ID, &job.Title, &job.Ticket); err != nil {
+			logger.LogToLogFile(c, fmt.Sprintf("Search Job Finances [SQL]: Error while scanning row `%v`", err))
 			c.HTML(http.StatusOK, "_jobSearchResultsFinances.html", gin.H{
 				"Error": "An internal error occurred while searching jobs. Please try again.",
 			})
 
-			log.Printf("failed to scan row: %v", err)
 			return
 		}
 		jobs = append(jobs, job)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Printf("error iterating rows: %v", err)
+		logger.LogToLogFile(c, fmt.Sprintf("Search Job Finances [SQL]: Error while iterating rows `%v`", err))
 		c.HTML(http.StatusOK, "_jobSearchResultsFinances.html", gin.H{
 			"Error": "An internal error occurred while searching jobs. Please try again.",
 		})
